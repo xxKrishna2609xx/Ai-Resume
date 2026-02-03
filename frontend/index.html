@@ -3,46 +3,171 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Resume Analyzer</title>
+    <title>AI Resume Analyzer & Job Matcher</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="container">
-        <h1>AI Resume Analyzer</h1>
-        <p>Upload your resume (PDF) to get AI feedback.</p>
+    <!-- MAIN LAYOUT: TWO PANELS -->
+    <div class="layout-wrapper">
+        
+        <!-- LEFT PANEL: RESUME ANALYZER -->
+        <div class="panel panel-left">
+            <div class="container">
+                <h1>📄 Resume Analyzer</h1>
+                <p>Upload your resume (PDF) to get AI feedback.</p>
 
-        <div id="drop-zone" class="drop-zone">
-            <span class="drop-text">Drag & Drop your PDF here</span>
-            <span class="or-text">or click to browse</span>
-            <input type="file" id="file-input" accept=".pdf" hidden>
+                <div id="drop-zone" class="drop-zone">
+                    <span class="drop-text">Drag & Drop your PDF here</span>
+                    <span class="or-text">or click to browse</span>
+                    <input type="file" id="file-input" accept=".pdf" hidden>
+                </div>
+
+                <div id="status"></div>
+
+                <div id="result-box" class="result-box hidden">
+                    <h2>📋 Analysis Summary</h2>
+                    <div id="summary" class="summary">
+                        <div class="summary-row">
+                            <span class="summary-label">Name</span>
+                            <span id="summary-name" class="summary-value">—</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Experience</span>
+                            <span id="summary-exp" class="summary-value">—</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label">Resume Score</span>
+                            <span id="summary-score" class="summary-value">—</span>
+                        </div>
+                        <div class="summary-row summary-skills">
+                            <span class="summary-label">Top Skills</span>
+                            <div id="summary-skills" class="summary-value summary-tags"></div>
+                        </div>
+                        <div class="summary-row summary-text">
+                            <span class="summary-label">Summary</span>
+                            <p id="summary-text" class="summary-value">—</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Find Jobs Button -->
+                    <button id="find-jobs-btn" class="btn btn-primary hidden">
+                        🔍 Find Matching Jobs
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div id="status"></div>
+        <!-- RIGHT PANEL: JOB MATCHER -->
+        <div class="panel panel-right">
+            <div class="container job-panel">
+                <h1>💼 Job Matcher</h1>
+                <p>Find jobs matching your profile</p>
 
-        <div id="result-box" class="result-box hidden">
-            <h2>📋 Analysis Summary</h2>
-            <div id="summary" class="summary">
-                <div class="summary-row">
-                    <span class="summary-label">Name</span>
-                    <span id="summary-name" class="summary-value">—</span>
+                <!-- Job Search Filters -->
+                <div id="job-filters" class="job-filters hidden">
+                    <div class="filter-group">
+                        <label for="job-location">Location:</label>
+                        <select id="job-location" class="filter-input">
+                            <option value="US">United States</option>
+                            <option value="GB">United Kingdom</option>
+                            <option value="AU">Australia</option>
+                            <option value="CA">Canada</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="job-title">Job Title:</label>
+                        <input type="text" id="job-title" class="filter-input" placeholder="e.g., Python Developer">
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="job-type">Job Type:</label>
+                        <select id="job-type" class="filter-input">
+                            <option value="">All Types</option>
+                            <option value="full-time">Full-time</option>
+                            <option value="part-time">Part-time</option>
+                            <option value="contract">Contract</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label for="min-salary">Min Salary ($):</label>
+                        <input type="number" id="min-salary" class="filter-input" placeholder="50000">
+                    </div>
+
+                    <button id="search-jobs-btn" class="btn btn-primary">
+                        🔎 Search Jobs
+                    </button>
+                    <button id="match-resume-btn" class="btn btn-success hidden">
+                        ⭐ Match to My Resume
+                    </button>
                 </div>
-                <div class="summary-row">
-                    <span class="summary-label">Experience</span>
-                    <span id="summary-exp" class="summary-value">—</span>
+
+                <!-- Loading State -->
+                <div id="job-status" class="job-status hidden"></div>
+
+                <!-- Job Results -->
+                <div id="job-results" class="job-results hidden">
+                    <div class="job-header">
+                        <h2>📌 Available Opportunities</h2>
+                        <span id="job-count" class="job-count">0 jobs</span>
+                    </div>
+                    
+                    <div id="jobs-list" class="jobs-list"></div>
                 </div>
-                <div class="summary-row">
-                    <span class="summary-label">Resume Score</span>
-                    <span id="summary-score" class="summary-value">—</span>
+
+                <!-- Empty State -->
+                <div id="job-empty-state" class="empty-state hidden">
+                    <p>💡 Upload a resume and click "Find Matching Jobs" to get started!</p>
                 </div>
-                <div class="summary-row summary-skills">
-                    <span class="summary-label">Top Skills</span>
-                    <div id="summary-skills" class="summary-value summary-tags"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODAL FOR DETAILED JOB VIEW -->
+    <div id="job-modal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <h2 id="modal-title"></h2>
+            <div class="modal-body">
+                <div class="modal-field">
+                    <strong>Company:</strong>
+                    <p id="modal-company"></p>
                 </div>
-                <div class="summary-row summary-text">
-                    <span class="summary-label">Summary</span>
-                    <p id="summary-text" class="summary-value">—</p>
+                <div class="modal-field">
+                    <strong>Location:</strong>
+                    <p id="modal-location"></p>
                 </div>
+                <div class="modal-field">
+                    <strong>Salary:</strong>
+                    <p id="modal-salary"></p>
+                </div>
+                <div class="modal-field">
+                    <strong>Match Score:</strong>
+                    <div class="score-bar">
+                        <div id="modal-score-bar" class="score-fill"></div>
+                    </div>
+                    <p id="modal-score-text"></p>
+                </div>
+                <div class="modal-field">
+                    <strong>Your Matching Skills:</strong>
+                    <div id="modal-matching-skills" class="summary-tags"></div>
+                </div>
+                <div class="modal-field">
+                    <strong>Job Requirements:</strong>
+                    <div id="modal-requirements" class="summary-tags"></div>
+                </div>
+                <div class="modal-field">
+                    <strong>Description:</strong>
+                    <p id="modal-description" style="max-height: 200px; overflow-y: auto;"></p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <a id="modal-apply-btn" href="#" target="_blank" class="btn btn-primary">
+                    🔗 View Job
+                </a>
             </div>
         </div>
     </div>

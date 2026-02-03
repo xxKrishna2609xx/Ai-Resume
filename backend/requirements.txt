@@ -8,3 +8,4 @@ google-generativeai
 pytesseract
 pdf2image
 pillow
+requests

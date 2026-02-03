@@ -17,15 +17,18 @@ load_dotenv()
 try:
     from app.services.pdf_parser import extract_text_from_pdf
     from app.services.ai_matcher import analyze_resume_with_gemini
+    from app.services.job_aggregator import job_aggregator
 except ImportError:
     try:
         # Fallback for running as a module
         from services.pdf_parser import extract_text_from_pdf
         from services.ai_matcher import analyze_resume_with_gemini
+        from services.job_aggregator import job_aggregator
     except ImportError:
         print("⚠️ Warning: Could not import services. Check your folder structure.")
         def extract_text_from_pdf(bytes_data): return ""
         def analyze_resume_with_gemini(text): return {"error": "AI Module Missing"}
+        job_aggregator = None
 
 # 2. INITIALIZE FASTAPI
 app = FastAPI(title="AI Resume Analyzer")
@@ -76,6 +79,26 @@ class ResumeResponse(BaseModel):
     extracted_text_preview: str
     ai_analysis: Dict[str, Any] # Holds the full JSON from Gemini
     message: str
+
+class JobFilterRequest(BaseModel):
+    """Model for job filtering request"""
+    location: str = "US"
+    job_title: Optional[str] = ""
+    min_salary: Optional[int] = None
+    max_salary: Optional[int] = None
+    job_types: Optional[List[str]] = []
+    required_skills: Optional[List[str]] = []
+    location_keywords: Optional[List[str]] = []
+    results_per_page: int = 10
+    page: int = 1
+
+class JobMatchRequest(BaseModel):
+    """Model for matching jobs to a resume"""
+    resume_id: str
+    job_title: str = ""
+    location: str = "US"
+    results_per_page: int = 10
+    page: int = 1
 
 # --- ROUTES ---
 
@@ -156,6 +179,133 @@ def get_resume(resume_id: str):
             raise HTTPException(status_code=404, detail="Resume not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# --- JOB AGGREGATION ROUTES (MODULE 4) ---
+
+@app.post("/jobs/search")
+async def search_jobs(request: JobFilterRequest):
+    """
+    🔹 MODULE 4: Fetch jobs from Adzuna API
+    
+    Fetches real-time job listings based on search criteria and filters them
+    by user preferences (salary, job type, required skills, location)
+    """
+    if not job_aggregator:
+        raise HTTPException(status_code=503, detail="Job aggregator service not available")
+    
+    try:
+        # Step A: Fetch jobs from Adzuna API
+        jobs = job_aggregator.fetch_jobs_from_adzuna(
+            location=request.location,
+            job_title=request.job_title,
+            results_per_page=request.results_per_page,
+            page=request.page
+        )
+        
+        if not jobs:
+            return {"jobs": [], "total": 0, "message": "No jobs found matching your criteria"}
+        
+        # Step B: Apply filters
+        filters = {
+            "min_salary": request.min_salary,
+            "max_salary": request.max_salary,
+            "job_types": request.job_types,
+            "required_skills": request.required_skills,
+            "location_keywords": request.location_keywords,
+        }
+        
+        filtered_jobs = job_aggregator.filter_jobs(jobs, filters)
+        
+        print(f"✅ Found {len(filtered_jobs)} jobs after filtering")
+        
+        return {
+            "jobs": filtered_jobs,
+            "total": len(filtered_jobs),
+            "message": f"Found {len(filtered_jobs)} relevant jobs"
+        }
+        
+    except Exception as e:
+        print(f"❌ Error searching jobs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/jobs/match-resume")
+async def match_jobs_to_resume(request: JobMatchRequest):
+    """
+    🔹 MODULE 4: Match jobs to candidate's resume
+    
+    Fetches jobs and ranks them based on how well they match the candidate's
+    skills, experience level, and preferences. Returns jobs sorted by relevance.
+    """
+    if not job_aggregator:
+        raise HTTPException(status_code=503, detail="Job aggregator service not available")
+    
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+    
+    try:
+        # Step A: Get resume data from Firebase
+        doc = db.collection("resumes").document(request.resume_id).get()
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail="Resume not found")
+        
+        resume_data = doc.to_dict()
+        ai_analysis = resume_data.get("full_ai_response", {})
+        
+        resume_skills = ai_analysis.get("skills", [])
+        experience_years = ai_analysis.get("experience_years", 0)
+        
+        print(f"👤 Matching jobs for candidate with {len(resume_skills)} skills and {experience_years} years experience")
+        
+        # Step B: Fetch jobs from Adzuna
+        jobs = job_aggregator.fetch_jobs_from_adzuna(
+            location="US",
+            job_title=request.job_title,
+            results_per_page=request.results_per_page,
+            page=request.page
+        )
+        
+        if not jobs:
+            return {"jobs": [], "total": 0, "message": "No jobs found"}
+        
+        # Step C: Score and rank jobs based on resume match
+        matched_jobs = job_aggregator.match_jobs_to_resume(
+            jobs,
+            resume_skills,
+            experience_years
+        )
+        
+        print(f"✅ Ranked {len(matched_jobs)} jobs for resume match")
+        
+        return {
+            "candidate_name": ai_analysis.get("candidate_name", "Unknown"),
+            "candidate_skills": resume_skills,
+            "candidate_experience_years": experience_years,
+            "jobs": matched_jobs,
+            "total": len(matched_jobs),
+            "message": f"Found {len(matched_jobs)} matching job opportunities"
+        }
+        
+    except Exception as e:
+        print(f"❌ Error matching jobs: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/jobs/locations")
+async def get_supported_locations():
+    """
+    Get list of supported job search locations (Adzuna supported countries)
+    """
+    locations = {
+        "US": "United States",
+        "GB": "United Kingdom",
+        "AU": "Australia",
+        "CA": "Canada",
+        "FR": "France",
+        "DE": "Germany",
+        "NL": "Netherlands",
+        "IN": "India",
+        "SG": "Singapore",
+    }
+    return {"locations": locations}
 
 if __name__ == "__main__":
     import uvicorn
