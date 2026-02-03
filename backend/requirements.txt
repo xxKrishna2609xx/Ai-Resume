@@ -1,0 +1,10 @@
+firebase-admin
+fastapi
+pydantic
+python-dotenv
+uvicorn
+pdfminer.six
+google-generativeai
+pytesseract
+pdf2image
+pillow
