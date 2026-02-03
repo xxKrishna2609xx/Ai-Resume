@@ -2,7 +2,11 @@ const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 const statusDiv = document.getElementById('status');
 const resultBox = document.getElementById('result-box');
-const jsonOutput = document.getElementById('json-output');
+const summaryName = document.getElementById('summary-name');
+const summaryExp = document.getElementById('summary-exp');
+const summaryScore = document.getElementById('summary-score');
+const summarySkills = document.getElementById('summary-skills');
+const summaryText = document.getElementById('summary-text');
 
 // 1. Handle Click to Browse
 dropZone.addEventListener('click', () => fileInput.click());
@@ -25,12 +29,16 @@ function preventDefaults(e) {
 }
 
 // Highlight drop zone when dragging over
-['dragenter', 'dragover'].forEach(() => {
-    dropZone.classList.add('drag-over');
+['dragenter', 'dragover'].forEach((eventName) => {
+    dropZone.addEventListener(eventName, () => {
+        dropZone.classList.add('drag-over');
+    }, false);
 });
 
-['dragleave', 'drop'].forEach(() => {
-    dropZone.classList.remove('drag-over');
+['dragleave', 'drop'].forEach((eventName) => {
+    dropZone.addEventListener(eventName, () => {
+        dropZone.classList.remove('drag-over');
+    }, false);
 });
 
 // Handle the actual file drop
@@ -76,9 +84,45 @@ async function uploadFile(file) {
         statusDiv.textContent = "✅ Analysis Complete!";
         statusDiv.style.color = "green";
         
-        // Display Raw JSON (You can format this nicely later)
+        // Display a nicer summary
         resultBox.classList.remove('hidden');
-        jsonOutput.textContent = JSON.stringify(data, null, 2);
+        const analysis = data?.ai_analysis || {};
+        if (summaryName) {
+            summaryName.textContent = analysis.candidate_name || "Unknown";
+        }
+        if (summaryExp) {
+            summaryExp.textContent = analysis.experience_years !== undefined
+                ? `${analysis.experience_years} years`
+                : "N/A";
+        }
+        if (summaryScore) {
+            summaryScore.textContent = analysis.resume_quality_score !== undefined
+                ? `${analysis.resume_quality_score}/10`
+                : "N/A";
+        }
+
+        // Render skills as tags
+        if (summarySkills) {
+            summarySkills.innerHTML = "";
+            const skills = Array.isArray(analysis.skills) ? analysis.skills.slice(0, 12) : [];
+            if (skills.length === 0) {
+                const emptyTag = document.createElement('span');
+                emptyTag.className = 'tag tag-muted';
+                emptyTag.textContent = 'No skills found';
+                summarySkills.appendChild(emptyTag);
+            } else {
+                skills.forEach((skill) => {
+                    const tag = document.createElement('span');
+                    tag.className = 'tag';
+                    tag.textContent = skill;
+                    summarySkills.appendChild(tag);
+                });
+            }
+        }
+
+        if (summaryText) {
+            summaryText.textContent = analysis.summary || "No summary available.";
+        }
 
     } catch (error) {
         statusDiv.textContent = `❌ Upload Failed: ${error.message}`;

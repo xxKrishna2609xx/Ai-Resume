@@ -21,8 +21,29 @@
         <div id="status"></div>
 
         <div id="result-box" class="result-box hidden">
-            <h2>📋 Analysis Result</h2>
-            <pre id="json-output"></pre>
+            <h2>📋 Analysis Summary</h2>
+            <div id="summary" class="summary">
+                <div class="summary-row">
+                    <span class="summary-label">Name</span>
+                    <span id="summary-name" class="summary-value">—</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Experience</span>
+                    <span id="summary-exp" class="summary-value">—</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Resume Score</span>
+                    <span id="summary-score" class="summary-value">—</span>
+                </div>
+                <div class="summary-row summary-skills">
+                    <span class="summary-label">Top Skills</span>
+                    <div id="summary-skills" class="summary-value summary-tags"></div>
+                </div>
+                <div class="summary-row summary-text">
+                    <span class="summary-label">Summary</span>
+                    <p id="summary-text" class="summary-value">—</p>
+                </div>
+            </div>
         </div>
     </div>
 
