@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Your Profile - AI Resume Matcher</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .setup-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .setup-box {
+            background: white;
+            border-radius: 20px;
+            padding: 50px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 550px;
+            width: 100%;
+        }
+
+        .setup-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .setup-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .setup-subtitle {
+            font-size: 16px;
+            color: #666;
+        }
+
+        .role-selection {
+            margin-bottom: 30px;
+        }
+
+        .role-label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .role-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .role-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 25px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .role-card:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .role-card.selected {
+            border-color: #667eea;
+            background: #f5f7ff;
+        }
+
+        .role-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .role-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .role-description {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .job-seeker-fields,
+        .company-fields {
+            display: none;
+        }
+
+        .error-message {
+            background: #ffe6e6;
+            color: #d32f2f;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="setup-box">
+            <div class="setup-header">
+                <h1 class="setup-title">Welcome! 👋</h1>
+                <p class="setup-subtitle">Let's set up your profile</p>
+            </div>
+
+            <div id="error-message" class="error-message"></div>
+
+            <form id="profile-form">
+                <!-- Role Selection -->
+                <div class="role-selection">
+                    <label class="role-label">I am a...</label>
+                    <div class="role-options">
+                        <div class="role-card" data-role="job_seeker">
+                            <div class="role-icon">👔</div>
+                            <div class="role-title">Job Seeker</div>
+                            <div class="role-description">Find your dream job</div>
+                        </div>
+                        <div class="role-card" data-role="company">
+                            <div class="role-icon">🏢</div>
+                            <div class="role-title">Company</div>
+                            <div class="role-description">Hire top talent</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="role-input" name="role" required>
+                </div>
+
+                <!-- Job Seeker Fields -->
+                <div class="job-seeker-fields">
+                    <div class="form-group">
+                        <label class="form-label" for="current-title">Current Title</label>
+                        <input type="text" id="current-title" class="form-input" placeholder="e.g., Software Engineer">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="experience-years">Years of Experience</label>
+                        <input type="number" id="experience-years" class="form-input" placeholder="e.g., 5" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="skills">Key Skills (comma-separated)</label>
+                        <input type="text" id="skills" class="form-input" placeholder="e.g., Python, React, AWS">
+                    </div>
+                </div>
+
+                <!-- Company Fields -->
+                <div class="company-fields">
+                    <div class="form-group">
+                        <label class="form-label" for="company-name">Company Name</label>
+                        <input type="text" id="company-name" class="form-input" placeholder="e.g., Tech Corp Inc.">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="company-industry">Industry</label>
+                        <input type="text" id="company-industry" class="form-input" placeholder="e.g., Technology, Finance">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="company-size">Company Size</label>
+                        <select id="company-size" class="form-input">
+                            <option value="">Select size</option>
+                            <option value="1-10">1-10 employees</option>
+                            <option value="11-50">11-50 employees</option>
+                            <option value="51-200">51-200 employees</option>
+                            <option value="201-500">201-500 employees</option>
+                            <option value="501+">501+ employees</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" id="submit-btn" class="submit-btn" disabled>Complete Setup</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCni2yUOQx_bQJaiP05-fEEJSt-N6uKvaw",
+            authDomain: "ai-resume-2c293.firebaseapp.com",
+            projectId: "ai-resume-2c293",
+            storageBucket: "ai-resume-2c293.firebasestorage.app",
+            messagingSenderId: "1002685452334",
+            appId: "1:1002685452334:web:cf20d3ee8eb3d794a64fbf",
+            measurementId: "G-0SSPJLXKR3"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        const roleCards = document.querySelectorAll('.role-card');
+        const roleInput = document.getElementById('role-input');
+        const jobSeekerFields = document.querySelector('.job-seeker-fields');
+        const companyFields = document.querySelector('.company-fields');
+        const submitBtn = document.getElementById('submit-btn');
+        const profileForm = document.getElementById('profile-form');
+        const errorMessage = document.getElementById('error-message');
+
+        let selectedRole = null;
+
+        // Require authentication
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = '/static/login.html';
+            } else {
+                // Check if profile already exists
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    window.location.href = '/static/dashboard.html';
+                }
+            }
+        });
+
+        // Role selection
+        roleCards.forEach(card => {
+            card.addEventListener('click', () => {
+                roleCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedRole = card.dataset.role;
+                roleInput.value = selectedRole;
+
+                // Show/hide fields based on role
+                if (selectedRole === 'job_seeker') {
+                    jobSeekerFields.style.display = 'block';
+                    companyFields.style.display = 'none';
+                } else {
+                    jobSeekerFields.style.display = 'none';
+                    companyFields.style.display = 'block';
+                }
+
+                submitBtn.disabled = false;
+            });
+        });
+
+        // Form submission
+        profileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            try {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Creating profile...';
+                errorMessage.style.display = 'none';
+
+                const user = auth.currentUser;
+                if (!user) throw new Error('Not authenticated');
+
+                const profileData = {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    photoURL: user.photoURL,
+                    role: selectedRole,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                if (selectedRole === 'job_seeker') {
+                    profileData.currentTitle = document.getElementById('current-title').value;
+                    profileData.experienceYears = parseInt(document.getElementById('experience-years').value) || 0;
+                    profileData.skills = document.getElementById('skills').value.split(',').map(s => s.trim()).filter(s => s);
+                    profileData.openToWork = true; // Default to open
+                    profileData.resumeId = null;
+                } else {
+                    profileData.companyName = document.getElementById('company-name').value;
+                    profileData.industry = document.getElementById('company-industry').value;
+                    profileData.companySize = document.getElementById('company-size').value;
+                }
+
+                await db.collection('users').doc(user.uid).set(profileData);
+
+                // Redirect to dashboard
+                window.location.href = '/static/dashboard.html';
+
+            } catch (error) {
+                console.error('Profile creation error:', error);
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Complete Setup';
+            }
+        });
+    </script>
+</body>
+</html>

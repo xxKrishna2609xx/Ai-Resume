@@ -83,8 +83,17 @@ async function uploadFile(file) {
     formData.append('file', file);
 
     try {
+        // Get auth token (from index.html's auth setup)
+        const token = window.userToken || null;
+        
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch('http://127.0.0.1:8000/upload-resume', {
             method: 'POST',
+            headers: headers,
             body: formData
         });
 
@@ -222,9 +231,15 @@ async function matchResumeToJobs() {
     jobsList.innerHTML = '';
 
     try {
+        const token = window.userToken || null;
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch('http://127.0.0.1:8000/jobs/match-resume', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify({
                 resume_id: currentResumeId,
                 job_title: jobTitle,

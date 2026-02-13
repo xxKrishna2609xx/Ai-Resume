@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AI Resume Matcher</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .login-box {
+            background: white;
+            border-radius: 20px;
+            padding: 50px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 450px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .login-logo {
+            font-size: 60px;
+            margin-bottom: 10px;
+        }
+
+        .login-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .login-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .google-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+            padding: 15px 30px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .google-btn:hover {
+            border-color: #4285f4;
+            box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .google-btn img {
+            width: 24px;
+            height: 24px;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 30px 0;
+            color: #999;
+            font-size: 14px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .divider::before {
+            margin-right: 15px;
+        }
+
+        .divider::after {
+            margin-left: 15px;
+        }
+
+        .features {
+            text-align: left;
+            margin-top: 30px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .feature-icon {
+            font-size: 20px;
+            color: #667eea;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #ffe6e6;
+            color: #d32f2f;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-logo">🚀</div>
+            <h1 class="login-title">AI Resume Matcher</h1>
+            <p class="login-subtitle">Connect talent with opportunity</p>
+
+            <button id="google-signin-btn" class="google-btn">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                Sign in with Google
+            </button>
+
+            <div class="divider">Secure sign-in with Firebase</div>
+
+            <div class="features">
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span>AI-powered resume analysis</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span>Smart job matching algorithm</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span>Connect with top companies</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-icon">✓</span>
+                    <span>Manage your career profile</span>
+                </div>
+            </div>
+
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Signing you in...</p>
+            </div>
+
+            <div id="error-message" class="error-message"></div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCni2yUOQx_bQJaiP05-fEEJSt-N6uKvaw",
+            authDomain: "ai-resume-2c293.firebaseapp.com",
+            projectId: "ai-resume-2c293",
+            storageBucket: "ai-resume-2c293.firebasestorage.app",
+            messagingSenderId: "1002685452334",
+            appId: "1:1002685452334:web:cf20d3ee8eb3d794a64fbf",
+            measurementId: "G-0SSPJLXKR3"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // UI Elements
+        const googleSignInBtn = document.getElementById('google-signin-btn');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('error-message');
+
+        // Check if user is already logged in
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // User is signed in, check if profile exists
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                
+                if (userDoc.exists) {
+                    // Profile exists, redirect to dashboard
+                    window.location.href = '/static/dashboard.html';
+                } else {
+                    // New user, redirect to profile setup
+                    window.location.href = '/static/setup-profile.html';
+                }
+            }
+        });
+
+        // Google Sign-In
+        googleSignInBtn.addEventListener('click', async () => {
+            try {
+                googleSignInBtn.style.display = 'none';
+                loading.style.display = 'block';
+                errorMessage.style.display = 'none';
+
+                const provider = new firebase.auth.GoogleAuthProvider();
+                provider.addScope('profile');
+                provider.addScope('email');
+
+                await auth.signInWithPopup(provider);
+                // onAuthStateChanged will handle the redirect
+
+            } catch (error) {
+                console.error('Sign-in error:', error);
+                errorMessage.textContent = error.message;
+                errorMessage.style.display = 'block';
+                loading.style.display = 'none';
+                googleSignInBtn.style.display = 'flex';
+            }
+        });
+    </script>
+</body>
+</html>

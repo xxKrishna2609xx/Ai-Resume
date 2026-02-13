@@ -8,6 +8,20 @@
 </head>
 <body>
 
+    <!-- Navigation Bar -->
+    <nav class="navbar" style="background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="font-size: 24px; font-weight: 700; color: #667eea;">🚀 AI Resume Matcher</div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <button onclick="window.location.href='/static/dashboard.html'" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                Dashboard
+            </button>
+            <span id="user-name-display" style="font-weight: 600; color: #333;"></span>
+            <button id="logout-btn-nav" style="padding: 8px 16px; background: #f44336; color: white; border: none; border-radius: 6px; cursor: pointer; display: none;">
+                Logout
+            </button>
+        </div>
+    </nav>
+
     <!-- MAIN LAYOUT: TWO PANELS -->
     <div class="layout-wrapper">
         
@@ -171,6 +185,48 @@
             </div>
         </div>
     </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCni2yUOQx_bQJaiP05-fEEJSt-N6uKvaw",
+            authDomain: "ai-resume-2c293.firebaseapp.com",
+            projectId: "ai-resume-2c293",
+            storageBucket: "ai-resume-2c293.firebasestorage.app",
+            messagingSenderId: "1002685452334",
+            appId: "1:1002685452334:web:cf20d3ee8eb3d794a64fbf",
+            measurementId: "G-0SSPJLXKR3"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        
+        // Make userToken globally accessible for script.js
+        window.userToken = null;
+
+        // Check authentication
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = '/static/login.html';
+                return;
+            }
+
+            window.userToken = await user.getIdToken();
+            document.getElementById('user-name-display').textContent = user.displayName || user.email;
+            document.getElementById('logout-btn-nav').style.display = 'block';
+        });
+
+        // Logout
+        document.getElementById('logout-btn-nav')?.addEventListener('click', async () => {
+            await auth.signOut();
+            window.location.href = '/static/login.html';
+        });
+    </script>
 
     <script src="script.js"></script>
 </body>

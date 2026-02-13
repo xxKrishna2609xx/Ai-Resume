@@ -1,6 +1,6 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -18,17 +18,22 @@ try:
     from app.services.pdf_parser import extract_text_from_pdf
     from app.services.ai_matcher import analyze_resume_with_gemini
     from app.services.job_aggregator import job_aggregator
+    from app.core.auth import verify_firebase_token, get_current_user_optional, AuthUser
 except ImportError:
     try:
         # Fallback for running as a module
         from services.pdf_parser import extract_text_from_pdf
         from services.ai_matcher import analyze_resume_with_gemini
         from services.job_aggregator import job_aggregator
+        from core.auth import verify_firebase_token, get_current_user_optional, AuthUser
     except ImportError:
         print("⚠️ Warning: Could not import services. Check your folder structure.")
         def extract_text_from_pdf(bytes_data): return ""
         def analyze_resume_with_gemini(text): return {"error": "AI Module Missing"}
         job_aggregator = None
+        verify_firebase_token = None
+        get_current_user_optional = None
+        AuthUser = None
 
 # 2. INITIALIZE FASTAPI
 app = FastAPI(title="AI Resume Analyzer")
@@ -100,14 +105,182 @@ class JobMatchRequest(BaseModel):
     results_per_page: int = 10
     page: int = 1
 
+class UserProfile(BaseModel):
+    """Model for user profile data"""
+    role: str  # 'job_seeker' or 'company'
+    displayName: Optional[str] = None
+    photoURL: Optional[str] = None
+    # Job seeker fields
+    currentTitle: Optional[str] = None
+    experienceYears: Optional[int] = None
+    skills: Optional[List[str]] = []
+    openToWork: Optional[bool] = True
+    # Company fields
+    companyName: Optional[str] = None
+    industry: Optional[str] = None
+    companySize: Optional[str] = None
+
+class UpdateOpenToWorkRequest(BaseModel):
+    """Model for updating open to work status"""
+    openToWork: bool
+    page: int = 1
+
 # --- ROUTES ---
 
 @app.get("/")
 def health_check():
     return {"status": "running", "message": "AI Resume Matcher API is Online"}
 
+# --- AUTHENTICATION & USER ROUTES ---
+
+@app.get("/auth/me")
+async def get_current_user_profile(user: AuthUser = Depends(verify_firebase_token)):
+    """Get current authenticated user's profile from Firestore"""
+    try:
+        if db is None:
+            raise HTTPException(status_code=503, detail="Database not initialized")
+        
+        user_doc = db.collection("users").document(user.uid).get()
+        
+        if user_doc.exists:
+            return {"uid": user.uid, **user_doc.to_dict()}
+        else:
+            # User authenticated but no profile exists yet
+            return {
+                "uid": user.uid,
+                "email": user.email,
+                "needsProfileSetup": True
+            }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/auth/profile")
+async def create_or_update_profile(
+    profile: UserProfile,
+    user: AuthUser = Depends(verify_firebase_token)
+):
+    """Create or update user profile"""
+    try:
+        if db is None:
+            raise HTTPException(status_code=503, detail="Database not initialized")
+        
+        profile_data = profile.dict(exclude_none=True)
+        profile_data['uid'] = user.uid
+        profile_data['email'] = user.email
+        profile_data['updatedAt'] = datetime.datetime.utcnow()
+        
+        # Check if profile exists
+        user_ref = db.collection("users").document(user.uid)
+        user_doc = user_ref.get()
+        
+        if not user_doc.exists:
+            profile_data['createdAt'] = datetime.datetime.utcnow()
+            user_ref.set(profile_data)
+            return {"message": "Profile created successfully", "profile": profile_data}
+        else:
+            user_ref.update(profile_data)
+            return {"message": "Profile updated successfully", "profile": profile_data}
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.patch("/auth/open-to-work")
+async def update_open_to_work(
+    request: UpdateOpenToWorkRequest,
+    user: AuthUser = Depends(verify_firebase_token)
+):
+    """Update job seeker's 'open to work' status"""
+    try:
+        if db is None:
+            raise HTTPException(status_code=503, detail="Database not initialized")
+        
+        user_ref = db.collection("users").document(user.uid)
+        user_doc = user_ref.get()
+        
+        if not user_doc.exists:
+            raise HTTPException(status_code=404, detail="User profile not found")
+        
+        user_data = user_doc.to_dict()
+        if user_data.get('role') != 'job_seeker':
+            raise HTTPException(status_code=403, detail="Only job seekers can set open to work status")
+        
+        user_ref.update({
+            'openToWork': request.openToWork,
+            'updatedAt': datetime.datetime.utcnow()
+        })
+        
+        return {
+            "message": "Open to work status updated",
+            "openToWork": request.openToWork
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/candidates/search")
+async def search_candidates(
+    skills: Optional[str] = None,
+    min_experience: Optional[int] = None,
+    open_to_work_only: bool = True,
+    limit: int = 20,
+    user: AuthUser = Depends(verify_firebase_token)
+):
+    """
+    Search for job seekers (for companies)
+    Requires authentication and company role
+    """
+    try:
+        if db is None:
+            raise HTTPException(status_code=503, detail="Database not initialized")
+        
+        # Verify user is a company
+        user_doc = db.collection("users").document(user.uid).get()
+        if not user_doc.exists or user_doc.to_dict().get('role') != 'company':
+            raise HTTPException(status_code=403, detail="Only companies can search candidates")
+        
+        # Build query
+        query = db.collection("users").where('role', '==', 'job_seeker')
+        
+        if open_to_work_only:
+            query = query.where('openToWork', '==', True)
+        
+        candidates = []
+        for doc in query.limit(limit).stream():
+            candidate_data = doc.to_dict()
+            
+            # Filter by skills if specified
+            if skills:
+                skill_list = [s.strip().lower() for s in skills.split(',')]
+                candidate_skills = [s.lower() for s in candidate_data.get('skills', [])]
+                if not any(skill in candidate_skills for skill in skill_list):
+                    continue
+            
+            # Filter by minimum experience
+            if min_experience is not None:
+                if candidate_data.get('experienceYears', 0) < min_experience:
+                    continue
+            
+            # Remove sensitive data
+            candidate_data.pop('email', None)
+            candidates.append({
+                'uid': doc.id,
+                **candidate_data
+            })
+        
+        return {
+            "candidates": candidates,
+            "total": len(candidates),
+            "message": f"Found {len(candidates)} candidates"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/upload-resume", response_model=ResumeResponse)
-async def upload_resume(file: UploadFile = File(...)):
+async def upload_resume(
+    file: UploadFile = File(...),
+    user: AuthUser = Depends(verify_firebase_token)
+):
     """
     Receives PDF -> Extracts Text -> Sends to Gemini -> Saves JSON to Firebase
     """
@@ -136,6 +309,7 @@ async def upload_resume(file: UploadFile = File(...)):
         # Step D: Prepare Data for Firebase
         # We merge the AI result directly into our database object
         resume_data = {
+            "user_id": user.uid,  # Link resume to user
             "filename": file.filename,
             "upload_timestamp": datetime.datetime.utcnow(),
             "status": "analyzed",
@@ -152,6 +326,12 @@ async def upload_resume(file: UploadFile = File(...)):
         # Step E: Save to Firestore
         update_time, doc_ref = db.collection("resumes").add(resume_data)
         print(f"✅ Saved Analysis to ID: {doc_ref.id}")
+        
+        # Step F: Update user profile with resume ID
+        db.collection("users").document(user.uid).update({
+            'resumeId': doc_ref.id,
+            'updatedAt': datetime.datetime.utcnow()
+        })
 
         # Step F: Return Response to Frontend
         return {
@@ -229,7 +409,10 @@ async def search_jobs(request: JobFilterRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/jobs/match-resume")
-async def match_jobs_to_resume(request: JobMatchRequest):
+async def match_jobs_to_resume(
+    request: JobMatchRequest,
+    user: AuthUser = Depends(verify_firebase_token)
+):
     """
     🔹 MODULE 4: Match jobs to candidate's resume
     
