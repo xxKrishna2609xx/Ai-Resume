@@ -5,11 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Resume Analyzer & Job Matcher</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        .layout-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+    </style>
 </head>
 <body>
 
     <!-- Navigation Bar -->
-    <nav class="navbar" style="background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <nav class="navbar" style="position: sticky; top: 0; z-index: 1000; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div style="font-size: 24px; font-weight: 700; color: #667eea;">🚀 AI Resume Matcher</div>
         <div style="display: flex; align-items: center; gap: 15px;">
             <button onclick="window.location.href='/static/dashboard.html'" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">
@@ -79,7 +110,7 @@
                 <p>Find jobs matching your profile</p>
 
                 <!-- Job Search Filters -->
-                <div id="job-filters" class="job-filters hidden">
+                <div id="job-filters" class="job-filters">
                     <div class="filter-group">
                         <label for="job-location">Location:</label>
                         <select id="job-location" class="filter-input">
@@ -132,8 +163,8 @@
                 </div>
 
                 <!-- Empty State -->
-                <div id="job-empty-state" class="empty-state hidden">
-                    <p>💡 Upload a resume and click "Find Matching Jobs" to get started!</p>
+                <div id="job-empty-state" class="empty-state">
+                    <p>💡 Use the filters above to search for jobs. Upload a resume for personalized job matching!</p>
                 </div>
             </div>
         </div>

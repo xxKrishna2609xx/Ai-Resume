@@ -6,12 +6,24 @@
     <title>Dashboard - AI Resume Matcher</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            background: #f5f7fa;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
         }
 
         .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
             background: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             padding: 15px 30px;
@@ -67,11 +79,15 @@
         .dashboard-container {
             max-width: 1200px;
             margin: 30px auto;
-            padding: 0 20px;
+            padding: 0 20px 40px;
         }
 
         .dashboard-header {
             margin-bottom: 30px;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
 
         .dashboard-title {
@@ -385,11 +401,6 @@
             </div>
 
             <!-- Company Actions -->
-            <div class="action-card company-only hidden" id="browse-candidates-btn">
-                <div class="action-icon">👥</div>
-                <div class="action-title">Browse Candidates</div>
-                <div class="action-description">Find talented job seekers</div>
-            </div>
             <div class="action-card company-only hidden" onclick="window.location.href='/static/index.html#jobs'">
                 <div class="action-icon">📝</div>
                 <div class="action-title">Post a Job</div>
@@ -399,7 +410,12 @@
 
         <!-- Candidates Section (Companies Only) -->
         <div id="candidates-section" class="company-only hidden">
-            <h2 class="section-title">Available Candidates</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 class="section-title" style="margin-bottom: 0;">Available Candidates</h2>
+                <button id="refresh-candidates-btn" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                    🔄 Refresh
+                </button>
+            </div>
             <div class="candidate-list">
                 <div id="candidates-container">
                     <p style="text-align: center; color: #666;">Loading candidates...</p>
@@ -484,9 +500,17 @@
 
             // Show/hide sections based on role
             if (currentUser.role === 'company') {
+                console.log('👔 Company user detected - showing company dashboard');
                 document.querySelectorAll('.job-seeker-only').forEach(el => el.classList.add('hidden'));
                 document.querySelectorAll('.company-only').forEach(el => el.classList.remove('hidden'));
+                
+                // Make sure candidates section is visible
+                const candidatesSection = document.getElementById('candidates-section');
+                if (candidatesSection) {
+                    candidatesSection.classList.remove('hidden');
+                }
             } else {
+                console.log('👤 Job seeker detected - showing job seeker dashboard');
                 document.querySelectorAll('.company-only').forEach(el => el.classList.add('hidden'));
                 document.querySelectorAll('.job-seeker-only').forEach(el => el.classList.remove('hidden'));
                 
@@ -517,20 +541,30 @@
         }
 
         // Load candidates (for companies)
-        async function loadCandidates() {
+        async function loadCandidates(showLoading = true) {
             try {
+                const container = document.getElementById('candidates-container');
+                
+                if (showLoading) {
+                    container.innerHTML = '<p style="text-align: center; color: #666;">Loading candidates...</p>';
+                }
+
                 const response = await fetch('http://localhost:8000/candidates/search?open_to_work_only=true', {
                     headers: {
                         'Authorization': `Bearer ${window.idToken}`
                     }
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
                 displayCandidates(data.candidates || []);
             } catch (error) {
                 console.error('Error loading candidates:', error);
                 document.getElementById('candidates-container').innerHTML = 
-                    '<p style="text-align: center; color: #999;">Error loading candidates</p>';
+                    '<p style="text-align: center; color: #f44336;">Error loading candidates. Please try again.</p>';
             }
         }
 
@@ -539,7 +573,13 @@
             const container = document.getElementById('candidates-container');
             
             if (candidates.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: #666;">No candidates available</p>';
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">👥</div>
+                        <div style="font-size: 18px; color: #333; margin-bottom: 10px; font-weight: 600;">No candidates available</div>
+                        <p style="color: #666; font-size: 14px;">There are currently no job seekers who are open to work.</p>
+                    </div>
+                `;
                 return;
             }
 
@@ -547,17 +587,25 @@
                 <div class="candidate-item">
                     <div class="candidate-header">
                         <div>
-                            <div class="candidate-name">${candidate.displayName || 'Anonymous'}</div>
-                            <div class="candidate-title">${candidate.currentTitle || 'Job Seeker'} • ${candidate.experienceYears || 0} years</div>
+                            <div class="candidate-name">${candidate.displayName || 'Anonymous Candidate'}</div>
+                            <div class="candidate-title">${candidate.currentTitle || 'Job Seeker'} • ${candidate.experienceYears || 0} years experience</div>
+                        </div>
+                        <div style="text-align: right;">
+                            ${candidate.resumeId ? '<span style="background: #e8f5e9; color: #4caf50; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">✓ Resume</span>' : ''}
                         </div>
                     </div>
-                    <div class="candidate-skills">
-                        ${(candidate.skills || []).slice(0, 5).map(skill => 
-                            `<span class="skill-tag">${skill}</span>`
-                        ).join('')}
-                    </div>
+                    ${(candidate.skills && candidate.skills.length > 0) ? `
+                        <div class="candidate-skills">
+                            ${candidate.skills.slice(0, 8).map(skill => 
+                                `<span class="skill-tag">${skill}</span>`
+                            ).join('')}
+                            ${candidate.skills.length > 8 ? `<span class="skill-tag">+${candidate.skills.length - 8} more</span>` : ''}
+                        </div>
+                    ` : '<p style="color: #999; font-size: 13px; margin-top: 8px;">No skills listed</p>'}
                 </div>
             `).join('');
+            
+            console.log(`✅ Displayed ${candidates.length} candidates`);
         }
 
         // Update work status badge
@@ -605,9 +653,11 @@
             }
         });
 
-        // Browse candidates click
-        document.getElementById('browse-candidates-btn')?.addEventListener('click', () => {
-            document.getElementById('candidates-section').scrollIntoView({ behavior: 'smooth' });
+        // Refresh candidates button
+        document.getElementById('refresh-candidates-btn')?.addEventListener('click', async () => {
+            if (currentUser && currentUser.role === 'company') {
+                await loadCandidates();
+            }
         });
     </script>
 </body>

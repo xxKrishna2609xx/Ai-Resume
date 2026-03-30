@@ -150,8 +150,8 @@ async function uploadFile(file) {
         currentResumeId = data.id;
         currentResumeData = analysis;
         findJobsBtn.classList.remove('hidden');
-        jobFilters.classList.remove('hidden');
         matchResumeBtn.classList.remove('hidden');
+        // Hide empty state when resume is uploaded
         jobEmpty.classList.add('hidden');
 
     } catch (error) {

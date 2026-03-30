@@ -6,41 +6,57 @@
     <title>Login - AI Resume Matcher</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         .login-container {
             min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 20px;
         }
 
+        .login-logo {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            margin-bottom: 30px;
+        }
+
+        .login-title {
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 50px;
+            text-align: center;
+        }
+
         .login-box {
             background: white;
             border-radius: 20px;
-            padding: 50px 40px;
+            padding: 50px 60px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             max-width: 450px;
             width: 100%;
             text-align: center;
         }
 
-        .login-logo {
-            font-size: 60px;
-            margin-bottom: 10px;
-        }
-
-        .login-title {
-            font-size: 28px;
-            font-weight: 700;
+        .box-title {
+            font-size: 24px;
+            font-weight: 600;
             color: #333;
-            margin-bottom: 10px;
-        }
-
-        .login-subtitle {
-            font-size: 16px;
-            color: #666;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
 
         .google-btn {
@@ -58,7 +74,6 @@
             color: #333;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-bottom: 20px;
         }
 
         .google-btn:hover {
@@ -72,47 +87,11 @@
             height: 24px;
         }
 
-        .divider {
-            display: flex;
-            align-items: center;
-            margin: 30px 0;
-            color: #999;
+        .footer-text {
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 40px;
             font-size: 14px;
-        }
-
-        .divider::before,
-        .divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: #e0e0e0;
-        }
-
-        .divider::before {
-            margin-right: 15px;
-        }
-
-        .divider::after {
-            margin-left: 15px;
-        }
-
-        .features {
-            text-align: left;
-            margin-top: 30px;
-        }
-
-        .feature-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 15px;
-            color: #555;
-            font-size: 14px;
-        }
-
-        .feature-icon {
-            font-size: 20px;
-            color: #667eea;
+            text-align: center;
         }
 
         .loading {
@@ -144,48 +123,48 @@
             display: none;
             font-size: 14px;
         }
+
+        .features {
+            margin-top: 30px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .feature-icon {
+            font-size: 20px;
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
     <div class="login-container">
+        <div class="login-logo">📄</div>
+        <h1 class="login-title">AI Resume Analyzer</h1>
+        
         <div class="login-box">
-            <div class="login-logo">🚀</div>
-            <h1 class="login-title">AI Resume Matcher</h1>
-            <p class="login-subtitle">Connect talent with opportunity</p>
+            <h2 class="box-title">Sign in to continue</h2>
 
             <button id="google-signin-btn" class="google-btn">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
                 Sign in with Google
             </button>
 
-            <div class="divider">Secure sign-in with Firebase</div>
-
-            <div class="features">
-                <div class="feature-item">
-                    <span class="feature-icon">✓</span>
-                    <span>AI-powered resume analysis</span>
-                </div>
-                <div class="feature-item">
-                    <span class="feature-icon">✓</span>
-                    <span>Smart job matching algorithm</span>
-                </div>
-                <div class="feature-item">
-                    <span class="feature-icon">✓</span>
-                    <span>Connect with top companies</span>
-                </div>
-                <div class="feature-item">
-                    <span class="feature-icon">✓</span>
-                    <span>Manage your career profile</span>
-                </div>
-            </div>
-
             <div id="loading" class="loading">
                 <div class="spinner"></div>
-                <p>Signing you in...</p>
+                <p style="margin-top: 15px; color: #666;">Signing you in...</p>
             </div>
 
             <div id="error-message" class="error-message"></div>
         </div>
+
+        <p class="footer-text">© 2026 AI Resume Analyzer</p>
     </div>
 
     <!-- Firebase SDK -->
