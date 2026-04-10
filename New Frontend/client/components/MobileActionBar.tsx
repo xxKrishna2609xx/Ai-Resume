@@ -1,5 +1,7 @@
 import { Upload, Search } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { toNavUserRole } from "@/lib/routes";
 
 interface MobileActionBarProps {
   isAuthenticated?: boolean;
@@ -7,15 +9,19 @@ interface MobileActionBarProps {
 }
 
 export function MobileActionBar({
-  isAuthenticated = false,
-  userRole = "seeker",
+  isAuthenticated,
+  userRole,
 }: MobileActionBarProps) {
-  if (!isAuthenticated) return null;
+  const { isAuthenticated: sessionAuthenticated, profile } = useAuth();
+  const resolvedAuth = isAuthenticated ?? sessionAuthenticated;
+  const resolvedRole = userRole ?? toNavUserRole(profile?.role);
+
+  if (!resolvedAuth) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 md:hidden bg-card border-t border-border">
       <div className="flex items-center justify-around px-4 py-3 gap-2">
-        {userRole === "seeker" ? (
+        {resolvedRole === "seeker" ? (
           <>
             <Link
               to="/analyzer"

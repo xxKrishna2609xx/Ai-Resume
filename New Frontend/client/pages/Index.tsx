@@ -1,13 +1,41 @@
 import { Sparkles, BarChart3, Zap } from "lucide-react";
 import { useState } from "react";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { getHomeRouteByRole } from "@/lib/routes";
 
 export default function Index() {
-  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading, profile, signInWithGoogle, refreshProfile } = useAuth();
+  const [isSigningIn, setIsSigningIn] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated || isLoading) return;
+
+    if (profile?.needsProfileSetup) {
+      navigate("/profile-setup", { replace: true });
+      return;
+    }
+
+    navigate(getHomeRouteByRole(profile?.role), { replace: true });
+  }, [isAuthenticated, isLoading, navigate, profile]);
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    // TODO: Implement Google OAuth login
-    setTimeout(() => setIsLoading(false), 500);
+    try {
+      setIsSigningIn(true);
+      await signInWithGoogle();
+      const latestProfile = await refreshProfile();
+
+      if (latestProfile?.needsProfileSetup) {
+        navigate("/profile-setup", { replace: true });
+        return;
+      }
+
+      navigate(getHomeRouteByRole(latestProfile?.role), { replace: true });
+    } finally {
+      setIsSigningIn(false);
+    }
   };
 
   return (
@@ -64,10 +92,10 @@ export default function Index() {
             <div className="pt-6">
               <button
                 onClick={handleGoogleSignIn}
-                disabled={isLoading}
+                disabled={isSigningIn || isLoading}
                 className="w-full sm:w-fit px-8 py-4 rounded-xl font-semibold text-white bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
               >
-                {isLoading ? (
+                {isSigningIn || isLoading ? (
                   <>
                     <div className="animate-spin">
                       <Sparkles className="w-5 h-5" />

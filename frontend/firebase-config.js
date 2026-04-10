@@ -2,7 +2,7 @@
 // Get your Firebase config from: https://console.firebase.google.com/project/ai-resume-2c293/settings/general
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDpjYour_API_Key_Here", // Replace with your actual API key from Firebase Console
+    apiKey: "AIzaSyCni2yUOQx_bQJaiP05-fEEJSt-N6uKvaw", // Replace with your actual API key from Firebase Console
     authDomain: "ai-resume-2c293.firebaseapp.com",
     projectId: "ai-resume-2c293",
     storageBucket: "ai-resume-2c293.appspot.com",

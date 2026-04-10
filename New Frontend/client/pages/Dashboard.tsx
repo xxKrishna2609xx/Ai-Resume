@@ -2,23 +2,76 @@ import { TopNav } from "@/components/TopNav";
 import { MobileActionBar } from "@/components/MobileActionBar";
 import { Link } from "react-router-dom";
 import { Upload, Briefcase, Star, ToggleRight } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { getResumeById, searchJobs, updateOpenToWork } from "@/lib/api";
 
 export default function Dashboard() {
-  const [openToWork, setOpenToWork] = useState(true);
+  const { profile, getIdToken, refreshProfile } = useAuth();
+  const [openToWork, setOpenToWork] = useState(Boolean(profile?.openToWork));
+
+  useEffect(() => {
+    setOpenToWork(Boolean(profile?.openToWork));
+  }, [profile?.openToWork]);
+
+  const resumeQuery = useQuery({
+    queryKey: ["resume", profile?.resumeId],
+    queryFn: () => getResumeById(profile?.resumeId as string),
+    enabled: Boolean(profile?.resumeId),
+  });
+
+  const jobsQuery = useQuery({
+    queryKey: ["dashboard-jobs", profile?.currentTitle],
+    queryFn: () =>
+      searchJobs({
+        location: "US",
+        job_title: profile?.currentTitle ?? "",
+        results_per_page: 20,
+        page: 1,
+      }),
+  });
+
+  const openToWorkMutation = useMutation({
+    mutationFn: async (nextOpenToWork: boolean) => {
+      const token = await getIdToken();
+      if (!token) throw new Error("Missing authentication token");
+      return updateOpenToWork({ openToWork: nextOpenToWork }, token);
+    },
+    onSuccess: async (_, nextOpenToWork) => {
+      setOpenToWork(nextOpenToWork);
+      await refreshProfile();
+    },
+  });
+
+  const resumeScore = Number(
+    resumeQuery.data?.full_ai_response?.resume_quality_score ?? 0,
+  );
+  const welcomeName = profile?.displayName ?? profile?.email ?? "there";
+  const jobsTotal = jobsQuery.data?.total ?? 0;
+
+  const handleToggleOpenToWork = async () => {
+    const nextValue = !openToWork;
+    setOpenToWork(nextValue);
+    try {
+      await openToWorkMutation.mutateAsync(nextValue);
+    } catch {
+      setOpenToWork(!nextValue);
+    }
+  };
 
   return (
     <>
-      <TopNav isAuthenticated userName="John Doe" userRole="seeker" />
+      <TopNav />
       <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 pb-20 md:pb-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
           {/* Welcome section */}
           <div className="mb-12 fade-in">
             <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-2">
-              Welcome back, John! 👋
+              Welcome back, {welcomeName}! 
             </h1>
             <p className="text-lg text-muted-foreground">
-              Let's find your next great opportunity
+              Your profile and job opportunities are synced live from your backend.
             </p>
           </div>
 
@@ -28,12 +81,13 @@ export default function Dashboard() {
               <h2 className="font-semibold text-foreground mb-1">Profile Status</h2>
               <p className="text-sm text-muted-foreground">
                 {openToWork
-                  ? "✨ You're visible to employers"
-                  : "🔒 Your profile is hidden from employers"}
+                  ? "You are visible to employers"
+                  : "Your profile is hidden from employers"}
               </p>
             </div>
             <button
-              onClick={() => setOpenToWork(!openToWork)}
+              onClick={handleToggleOpenToWork}
+              disabled={openToWorkMutation.isPending}
               className={`flex items-center gap-3 px-6 py-3 rounded-xl font-semibold transition-all ${
                 openToWork
                   ? "bg-primary text-white hover:shadow-lg hover:shadow-primary/30"
@@ -59,11 +113,14 @@ export default function Dashboard() {
               </div>
               <h3 className="font-semibold text-foreground mb-1">Resume Score</h3>
               <p className="text-muted-foreground text-sm mb-6">
-                Last updated 2 days ago
+                {profile?.resumeId ? "Based on your latest uploaded resume" : "Upload a resume to see your score"}
               </p>
-              <div className="text-4xl font-bold text-primary mb-2">8.5/10</div>
+              <div className="text-4xl font-bold text-primary mb-2">{resumeScore}/10</div>
               <div className="w-full bg-muted rounded-full h-2 mb-4">
-                <div className="bg-gradient-to-r from-primary to-primary/60 h-2 rounded-full" style={{ width: "85%" }} />
+                <div
+                  className="bg-gradient-to-r from-primary to-primary/60 h-2 rounded-full"
+                  style={{ width: `${Math.min(100, Math.max(0, Number(resumeScore) * 10))}%` }}
+                />
               </div>
               <Link
                 to="/analyzer"
@@ -85,11 +142,11 @@ export default function Dashboard() {
               </div>
               <h3 className="font-semibold text-foreground mb-1">Job Matches</h3>
               <p className="text-muted-foreground text-sm mb-6">
-                Based on your profile
+                Live search with your current role and title
               </p>
-              <div className="text-4xl font-bold text-secondary mb-2">24</div>
+              <div className="text-4xl font-bold text-secondary mb-2">{jobsTotal}</div>
               <p className="text-xs text-muted-foreground mb-4">
-                +8 new matches since yesterday
+                {jobsQuery.isLoading ? "Loading opportunities..." : "Synced from the jobs API"}
               </p>
               <Link
                 to="/jobs"
@@ -148,16 +205,16 @@ export default function Dashboard() {
               </div>
               <h3 className="font-semibold text-foreground mb-2">Viewed Profile</h3>
               <p className="text-sm text-muted-foreground">
-                See how recruiters view your profile
+                Profile insights are available in your account metadata
               </p>
               <div className="mt-6 text-sm font-semibold text-accent">
-                Coming soon
+                Live profile connected
               </div>
             </div>
           </div>
         </div>
       </div>
-      <MobileActionBar isAuthenticated userRole="seeker" />
+      <MobileActionBar />
     </>
   );
 }

@@ -1,22 +1,37 @@
-# --- Python Virtual Environment (Seen in your root) ---
+# --- Python Virtual Environment ---
 venv/
 .venv/
 env/
 
-# --- Python Cache Files (Seen in backend/app/__pycache__) ---
+# --- Python Cache Files ---
 __pycache__/
 *.py[cod]
 *$py.class
 
+# --- Node.js & NPM ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# --- Build Outputs ---
+dist/
+dist-ssr/
+frontend/dist/
+backend/dist/
+New Frontend/dist/
+
 # --- Secrets & Environment Variables (CRITICAL) ---
-# Ignores .env in root and backend/
 .env
 .env.local
-# Ignores the Firebase key in backend/
+frontend/.env
+backend/.env
+New Frontend/.env
 serviceAccountKey.json
 
 # --- Large Binaries ---
-# Ignore the poppler folder (too large for GitHub)
 backend/poppler/
 *.zip
 *.exe
@@ -28,10 +43,19 @@ Thumbs.db
 # --- IDE Settings ---
 .vscode/
 .idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
+# --- Editor Cache ---
+*.local
+.config/
+
+# --- Documentation Files (Optional - generated during setup) ---
 FRONTEND_UPDATE_SUMMARY.md
 MODULE_4_JOB_AGGREGATION.md
 AUTHENTICATION_SETUP.md
 QUICKSTART_AUTH.md
 update-firebase-config.ps1
-# these are the files that are ignored
