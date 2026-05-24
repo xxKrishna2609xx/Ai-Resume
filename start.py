@@ -33,7 +33,7 @@ def main():
     print("⏳ Waiting for backend to start...")
     time.sleep(3)
 
-    # Fix #3: Frontend now runs on Vite dev server (port 5173), NOT served from FastAPI
+    # Fix #3: Frontend now runs on Vite dev server (port 8080), NOT served from FastAPI
     frontend_dir = os.path.join(base_dir, "Frontend")
     frontend_process = None
 
@@ -45,7 +45,7 @@ def main():
             shell=True,
         )
         time.sleep(4)
-        frontend_url = "http://localhost:5173"
+        frontend_url = "http://localhost:8080"
         print(f"🌐 Opening frontend: {frontend_url}")
         webbrowser.open(frontend_url)
     else:
@@ -53,7 +53,7 @@ def main():
 
     print()
     print("✅ Backend server:  http://localhost:8000")
-    print("✅ Frontend (Vite): http://localhost:5173")
+    print("✅ Frontend (Vite): http://localhost:8080")
     print()
     print("Press Ctrl+C to stop all servers...")
 
