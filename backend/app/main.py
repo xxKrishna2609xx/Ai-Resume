@@ -38,12 +38,7 @@ except ImportError:
 # 2. INITIALIZE FASTAPI
 app = FastAPI(title="AI Resume Analyzer")
 
-# Allow Firebase auth popups to close without COOP violations.
-@app.middleware("http")
-async def add_security_headers(request, call_next):
-    response = await call_next(request)
-    response.headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups"
-    return response
+
 
 # 3. ENABLE CORS
 # Fix #9: allow_origins=["*"] is incompatible with allow_credentials=True in browsers.

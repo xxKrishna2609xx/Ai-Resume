@@ -96,10 +96,10 @@ export async function uploadResume(file: File, token: string): Promise<UploadRes
   return parseResponse<UploadResumeResponse>(response);
 }
 
-export async function getResumeById(resumeId: string): Promise<ResumeDetails> {
+export async function getResumeById(resumeId: string, token: string): Promise<ResumeDetails> {
   return requestJson<ResumeDetails>(`/get-resume/${resumeId}`, {
     method: "GET",
-    headers: createHeaders(undefined, false),
+    headers: createHeaders(token, false),
   });
 }
 

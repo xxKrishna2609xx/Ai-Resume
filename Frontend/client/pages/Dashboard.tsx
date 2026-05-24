@@ -17,7 +17,11 @@ export default function Dashboard() {
 
   const resumeQuery = useQuery({
     queryKey: ["resume", profile?.resumeId],
-    queryFn: () => getResumeById(profile?.resumeId as string),
+    queryFn: async () => {
+      const token = await getIdToken();
+      if (!token) throw new Error("Missing authentication token");
+      return getResumeById(profile?.resumeId as string, token);
+    },
     enabled: Boolean(profile?.resumeId),
   });
 
