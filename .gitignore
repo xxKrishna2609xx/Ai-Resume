@@ -25,11 +25,14 @@ New Frontend/dist/
 
 # --- Secrets & Environment Variables (CRITICAL) ---
 .env
-.env.local
+.env.*
+!.env.example
 frontend/.env
 backend/.env
+Backend/.env
 New Frontend/.env
-serviceAccountKey.json
+**/serviceAccountKey.json
+firebase-adminsdk-*.json
 
 # --- Large Binaries ---
 backend/poppler/
