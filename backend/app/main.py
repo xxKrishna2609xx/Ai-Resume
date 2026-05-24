@@ -27,7 +27,7 @@ except ImportError:
         from services.job_aggregator import job_aggregator
         from core.auth import verify_firebase_token, get_current_user_optional, AuthUser
     except ImportError:
-        print("⚠️ Warning: Could not import services. Check your folder structure.")
+        print("[Warning] Could not import services. Check your folder structure.")
         def extract_text_from_pdf(bytes_data): return ""
         def analyze_resume_with_gemini(text): return {"error": "AI Module Missing"}
         job_aggregator = None
@@ -75,17 +75,17 @@ try:
         if os.path.exists(service_account_path):
             cred = credentials.Certificate(service_account_path)
             firebase_admin.initialize_app(cred)
-            print("✅ Firebase initialized successfully.")
+            print("[Firebase] Firebase initialized successfully.")
         else:
-            print(f"❌ Error: 'serviceAccountKey.json' not found at {service_account_path}")
+            print(f"[Firebase Error] Error: 'serviceAccountKey.json' not found at {service_account_path}")
 
     if firebase_admin._apps:
         db = firestore.client()
     else:
-        print("⚠️ Warning: Firebase App not initialized. DB operations will fail.")
+        print("[Firebase Warning] Firebase App not initialized. DB operations will fail.")
 
 except Exception as e:
-    print(f"❌ Firebase Connection Error: {e}")
+    print(f"[Firebase Error] Firebase Connection Error: {e}")
     db = None
 
 # --- PYDANTIC MODELS ---
@@ -314,7 +314,7 @@ async def upload_resume(
 
         # Step C: CALL GEMINI API 🧠 (using ai_matcher.py)
         # Note: The API Key is loaded automatically inside ai_matcher.py or via load_dotenv() here
-        print(f"🤖 Sending {len(extracted_text)} chars to Gemini...")
+        print(f"[AI] Sending {len(extracted_text)} chars to Gemini...")
         ai_result = analyze_resume_with_gemini(extracted_text)
         
         # Step D: Prepare Data for Firebase
@@ -336,13 +336,13 @@ async def upload_resume(
 
         # Step E: Save to Firestore
         update_time, doc_ref = db.collection("resumes").add(resume_data)
-        print(f"✅ Saved Analysis to ID: {doc_ref.id}")
+        print(f"[AI] Saved Analysis to ID: {doc_ref.id}")
         
-        # Step G: Update user profile with resume ID
-        db.collection("users").document(user.uid).update({
+        # Step G: Update user profile with resume ID (use set with merge=True in case user profile doesn't exist yet)
+        db.collection("users").document(user.uid).set({
             'resumeId': doc_ref.id,
             'updatedAt': datetime.datetime.utcnow()
-        })
+        }, merge=True)
 
         # Step H: Return Response to Frontend
         return {
@@ -354,7 +354,7 @@ async def upload_resume(
         }
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[Error] Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Fix #10: Added authentication so only authenticated users can fetch resumes
@@ -414,7 +414,7 @@ async def search_jobs(request: JobFilterRequest):
         
         filtered_jobs = job_aggregator.filter_jobs(jobs, filters)
         
-        print(f"✅ Found {len(filtered_jobs)} jobs after filtering")
+        print(f"[Jobs] Found {len(filtered_jobs)} jobs after filtering")
         
         return {
             "jobs": filtered_jobs,
@@ -423,7 +423,7 @@ async def search_jobs(request: JobFilterRequest):
         }
         
     except Exception as e:
-        print(f"❌ Error searching jobs: {e}")
+        print(f"[Jobs Error] Error searching jobs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/jobs/match-resume")
@@ -455,7 +455,7 @@ async def match_jobs_to_resume(
         resume_skills = ai_analysis.get("skills", [])
         experience_years = ai_analysis.get("experience_years", 0)
         
-        print(f"👤 Matching jobs for candidate with {len(resume_skills)} skills and {experience_years} years experience")
+        print(f"[Match] Matching jobs for candidate with {len(resume_skills)} skills and {experience_years} years experience")
         
         # Step B: Fetch jobs from Adzuna
         jobs = job_aggregator.fetch_jobs_from_adzuna(
@@ -475,7 +475,7 @@ async def match_jobs_to_resume(
             experience_years
         )
         
-        print(f"✅ Ranked {len(matched_jobs)} jobs for resume match")
+        print(f"[Match] Ranked {len(matched_jobs)} jobs for resume match")
         
         return {
             "candidate_name": ai_analysis.get("candidate_name", "Unknown"),
@@ -487,7 +487,7 @@ async def match_jobs_to_resume(
         }
         
     except Exception as e:
-        print(f"❌ Error matching jobs: {e}")
+        print(f"[Match Error] Error matching jobs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/jobs/locations")

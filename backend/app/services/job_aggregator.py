@@ -42,7 +42,7 @@ class JobAggregator:
             List of normalized job dictionaries
         """
         if not self.adzuna_app_id or not self.adzuna_app_key:
-            print("⚠️ Warning: Adzuna API credentials not set. Set ADZUNA_APP_ID and ADZUNA_APP_KEY")
+            print("[Warning] Adzuna API credentials not set. Set ADZUNA_APP_ID and ADZUNA_APP_KEY")
             return []
         
         try:
@@ -60,7 +60,7 @@ class JobAggregator:
             if job_title:
                 params["what"] = job_title
             
-            print(f"🔍 Fetching jobs from Adzuna for '{job_title or 'all'}' in {location}...")
+            print(f"[Jobs] Fetching jobs from Adzuna for '{job_title or 'all'}' in {location}...")
             response = requests.get(url, params=params, timeout=10)
             response.raise_for_status()
             
@@ -69,15 +69,15 @@ class JobAggregator:
             
             # Normalize Adzuna jobs to our standard format
             normalized_jobs = [self._normalize_adzuna_job(job) for job in jobs]
-            print(f"✅ Fetched {len(normalized_jobs)} jobs from Adzuna")
+            print(f"[Jobs] Fetched {len(normalized_jobs)} jobs from Adzuna")
             
             return normalized_jobs
             
         except requests.exceptions.RequestException as e:
-            print(f"❌ Error fetching from Adzuna: {e}")
+            print(f"[Jobs Error] Error fetching from Adzuna: {e}")
             return []
         except Exception as e:
-            print(f"❌ Unexpected error: {e}")
+            print(f"[Jobs Error] Unexpected error: {e}")
             return []
     
     def _normalize_adzuna_job(self, raw_job: Dict[str, Any]) -> Dict[str, Any]:

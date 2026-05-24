@@ -9,21 +9,21 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     """
     try:
         # 1. Try extracting text using pdfminer.six (for text-based PDFs)
-        print("🔍 Attempting text extraction with pdfminer...")
+        print("[PDF] Attempting text extraction with pdfminer...")
         raw_text = extract_text(io.BytesIO(file_bytes))
         
         # 2. Check if we got meaningful text
         if raw_text and raw_text.strip() and len(raw_text.strip()) > 50:
             clean_text = clean_text_data(raw_text)
-            print(f"✅ Successfully extracted {len(clean_text)} characters from PDF")
+            print(f"[PDF] Successfully extracted {len(clean_text)} characters from PDF")
             return clean_text
         
         # 3. If no text found, try OCR for image-based PDFs
-        print("⚠️ No text found with pdfminer. Attempting OCR for image-based PDF...")
+        print("[PDF Warning] No text found with pdfminer. Attempting OCR for image-based PDF...")
         return extract_text_with_ocr(file_bytes)
         
     except Exception as e:
-        print(f"❌ Error parsing PDF: {e}")
+        print(f"[PDF Error] Error parsing PDF: {e}")
         import traceback
         traceback.print_exc()
         return ""
@@ -44,11 +44,11 @@ def extract_text_with_ocr(file_bytes: bytes) -> str:
         backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         poppler_path = os.path.join(backend_dir, "poppler", "poppler-24.08.0", "Library", "bin")
         
-        print("📄 Converting PDF to images...")
+        print("[PDF OCR] Converting PDF to images...")
         # Convert PDF to images
         images = convert_from_bytes(file_bytes, poppler_path=poppler_path)
         
-        print(f"🖼️ Processing {len(images)} page(s) with OCR...")
+        print(f"[PDF OCR] Processing {len(images)} page(s) with OCR...")
         all_text = []
         
         for i, image in enumerate(images):
@@ -59,16 +59,16 @@ def extract_text_with_ocr(file_bytes: bytes) -> str:
         combined_text = "\n".join(all_text)
         clean_text = clean_text_data(combined_text)
         
-        print(f"✅ OCR extracted {len(clean_text)} characters from {len(images)} page(s)")
+        print(f"[PDF OCR] OCR extracted {len(clean_text)} characters from {len(images)} page(s)")
         return clean_text
         
     except ImportError as e:
-        print(f"❌ OCR libraries not installed: {e}")
-        print("💡 Install with: pip install pytesseract pdf2image pillow")
-        print("💡 Also install Tesseract-OCR: https://github.com/UB-Mannheim/tesseract/wiki")
+        print(f"[PDF OCR Error] OCR libraries not installed: {e}")
+        print("[Tip] Install with: pip install pytesseract pdf2image pillow")
+        print("[Tip] Also install Tesseract-OCR: https://github.com/UB-Mannheim/tesseract/wiki")
         return "ERROR: OCR not available. Please install pytesseract and pdf2image."
     except Exception as e:
-        print(f"❌ OCR failed: {e}")
+        print(f"[PDF OCR Error] OCR failed: {e}")
         import traceback
         traceback.print_exc()
         return ""

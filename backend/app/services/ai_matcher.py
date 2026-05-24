@@ -17,47 +17,45 @@ def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
         # Configure Gemini
         genai.configure(api_key=api_key)
 
-        # Fix #12: Try preferred models in order of preference first
-        # instead of blindly picking the first available model (which may be outdated).
+        # Fetch available models that support generateContent
+        available_model_names = []
+        try:
+            available_models = list(genai.list_models())
+            available_model_names = [m.name for m in available_models if 'generateContent' in m.supported_generation_methods]
+            print(f"[AI] Available models from API: {available_model_names}")
+        except Exception as e:
+            print(f"[Warning] Error listing models: {e}")
+
+        # List of preferred models in order of preference
         preferred_models = [
+            'gemini-3.5-flash',
+            'gemini-3.1-flash-lite',
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
             'gemini-1.5-flash',
             'gemini-1.5-pro',
             'gemini-pro',
-            'models/gemini-1.5-flash',
-            'models/gemini-1.5-pro',
-            'models/gemini-pro',
         ]
 
         model = None
         model_name = None
 
-        print("📋 Trying preferred Gemini models in order...")
+        print("[AI] Resolving Gemini model from available list...")
+        # Try to find a match from preferred models in the available models list
         for name in preferred_models:
-            try:
-                print(f"   Trying: {name}")
-                test_model = genai.GenerativeModel(name)
-                # Quick validation: just instantiating is enough; errors mean it's unavailable
-                model = test_model
-                model_name = name
-                print(f"   ✅ Using model: {model_name}")
+            # Check both prefixed and unprefixed versions
+            normalized_name = name if name.startswith("models/") else f"models/{name}"
+            if normalized_name in available_model_names:
+                model_name = normalized_name
+                model = genai.GenerativeModel(model_name)
+                print(f"   [OK] Using preferred model: {model_name}")
                 break
-            except Exception as e:
-                print(f"   ❌ {name} not available: {e}")
-                continue
 
-        # If no preferred model worked, fall back to listing all models
-        if not model:
-            print("⚠️ Preferred models unavailable. Checking all available models...")
-            try:
-                available_models = list(genai.list_models())
-                for m in available_models:
-                    if 'generateContent' in m.supported_generation_methods:
-                        print(f"   ✅ Found available: {m.name}")
-                        model_name = m.name
-                        model = genai.GenerativeModel(model_name)
-                        break
-            except Exception as e:
-                print(f"⚠️ Error listing models: {e}")
+        # Fallback if no preferred model matched
+        if not model and available_model_names:
+            model_name = available_model_names[0]
+            model = genai.GenerativeModel(model_name)
+            print(f"   [OK] Using fallback model: {model_name}")
 
         if not model:
             return {"error": "Could not find a working Gemini model"}
@@ -81,11 +79,11 @@ def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
         """
 
         # Generate response
-        print(f"🤖 Generating content with {model_name}...")
+        print(f"[AI] Generating content with {model_name}...")
         response = model.generate_content(prompt)
         result_text = response.text.strip()
         
-        print(f"✅ Got response: {result_text[:200]}...")
+        print(f"[AI] Got response: {result_text[:200]}...")
 
         # Try to parse JSON from response
         try:
@@ -105,13 +103,13 @@ def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
             # Parse the JSON
             ai_result = json.loads(cleaned_text)
             
-            print(f"✅ Successfully parsed JSON response")
+            print(f"[AI] Successfully parsed JSON response")
             
             return ai_result
             
         except json.JSONDecodeError as e:
-            print(f"⚠️ Failed to parse JSON from Gemini response: {e}")
-            print(f"🔍 Cleaned text: {cleaned_text[:500]}...")
+            print(f"[Warning] Failed to parse JSON from Gemini response: {e}")
+            print(f"[AI] Cleaned text: {cleaned_text[:500]}...")
             
             # Try to extract fields manually as fallback
             candidate_name = "Unknown"
@@ -134,7 +132,7 @@ def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
             if exp_match:
                 experience = int(exp_match.group(1))
             
-            print(f"📝 Extracted via regex - Name: {candidate_name}, Skills: {len(skills)}, Exp: {experience}")
+            print(f"[AI] Extracted via regex - Name: {candidate_name}, Skills: {len(skills)}, Exp: {experience}")
             
             # Return a structured fallback with extracted data
             return {
@@ -148,7 +146,7 @@ def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
             }
 
     except Exception as e:
-        print(f"❌ AI Analysis Error: {e}")
+        print(f"[Error] AI Analysis Error: {e}")
         import traceback
         traceback.print_exc()
         return {"error": f"AI Analysis failed: {str(e)}"}

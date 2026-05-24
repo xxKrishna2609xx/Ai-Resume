@@ -2,14 +2,24 @@ import { TopNav } from "@/components/TopNav";
 import { MobileActionBar } from "@/components/MobileActionBar";
 import { Upload, FileText } from "lucide-react";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { uploadResume } from "@/lib/api";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { uploadResume, getResumeById } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Analyzer() {
-  const { getIdToken, refreshProfile } = useAuth();
+  const { getIdToken, refreshProfile, profile } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const resumeQuery = useQuery({
+    queryKey: ["resume", profile?.resumeId],
+    queryFn: async () => {
+      const token = await getIdToken();
+      if (!token) throw new Error("Missing authentication token");
+      return getResumeById(profile?.resumeId as string, token);
+    },
+    enabled: Boolean(profile?.resumeId),
+  });
 
   const uploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -19,6 +29,7 @@ export default function Analyzer() {
     },
     onSuccess: async () => {
       await refreshProfile();
+      await resumeQuery.refetch();
     },
   });
 
@@ -28,16 +39,23 @@ export default function Analyzer() {
       return;
     }
 
-    if (selectedFile.type !== "application/pdf") {
+    const isPdf =
+      selectedFile.type === "application/pdf" ||
+      selectedFile.name.toLowerCase().endsWith(".pdf");
+    if (!isPdf) {
       setError("Only PDF files are supported.");
       return;
     }
 
     setError(null);
-    await uploadMutation.mutateAsync(selectedFile);
+    try {
+      await uploadMutation.mutateAsync(selectedFile);
+    } catch (err: any) {
+      setError(err?.message || "Upload and analysis failed. Please try again.");
+    }
   };
 
-  const analysis = uploadMutation.data?.ai_analysis;
+  const analysis = uploadMutation.data?.ai_analysis ?? resumeQuery.data?.full_ai_response;
 
   return (
     <>
