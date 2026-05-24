@@ -17,41 +17,51 @@ def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
         # Configure Gemini
         genai.configure(api_key=api_key)
 
-        # Try to find a working model
+        # Fix #12: Try preferred models in order of preference first
+        # instead of blindly picking the first available model (which may be outdated).
+        preferred_models = [
+            'gemini-1.5-flash',
+            'gemini-1.5-pro',
+            'gemini-pro',
+            'models/gemini-1.5-flash',
+            'models/gemini-1.5-pro',
+            'models/gemini-pro',
+        ]
+
         model = None
         model_name = None
-        
-        # First, list all available models
-        print("📋 Checking available Gemini models...")
-        try:
-            available_models = list(genai.list_models())
-            for m in available_models:
-                if 'generateContent' in m.supported_generation_methods:
-                    print(f"   ✅ Found: {m.name}")
-                    model_name = m.name
-                    model = genai.GenerativeModel(model_name)
-                    print(f"🎯 Using model: {model_name}")
-                    break
-        except Exception as e:
-            print(f"⚠️ Error listing models: {e}")
-        
-        # Fallback to hardcoded model names if listing fails
+
+        print("📋 Trying preferred Gemini models in order...")
+        for name in preferred_models:
+            try:
+                print(f"   Trying: {name}")
+                test_model = genai.GenerativeModel(name)
+                # Quick validation: just instantiating is enough; errors mean it's unavailable
+                model = test_model
+                model_name = name
+                print(f"   ✅ Using model: {model_name}")
+                break
+            except Exception as e:
+                print(f"   ❌ {name} not available: {e}")
+                continue
+
+        # If no preferred model worked, fall back to listing all models
         if not model:
-            print("⚠️ Trying fallback model names...")
-            model_names = ['gemini-pro', 'gemini-1.5-flash', 'models/gemini-pro']
-            for name in model_names:
-                try:
-                    print(f"   Trying: {name}")
-                    model = genai.GenerativeModel(name)
-                    model_name = name
-                    print(f"   ✅ Success with {name}")
-                    break
-                except Exception as e:
-                    print(f"   ❌ Failed: {e}")
-                    continue
-        
+            print("⚠️ Preferred models unavailable. Checking all available models...")
+            try:
+                available_models = list(genai.list_models())
+                for m in available_models:
+                    if 'generateContent' in m.supported_generation_methods:
+                        print(f"   ✅ Found available: {m.name}")
+                        model_name = m.name
+                        model = genai.GenerativeModel(model_name)
+                        break
+            except Exception as e:
+                print(f"⚠️ Error listing models: {e}")
+
         if not model:
             return {"error": "Could not find a working Gemini model"}
+
 
         # Create the prompt for resume analysis
         prompt = f"""

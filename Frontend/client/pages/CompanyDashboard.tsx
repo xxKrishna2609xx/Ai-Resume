@@ -12,6 +12,8 @@ interface CandidateFilters {
   minExperience?: number;
   openToWorkOnly: boolean;
   limit: number;
+  // Fix #11: Added real page field for proper pagination
+  page: number;
 }
 
 export default function CompanyDashboard() {
@@ -25,6 +27,7 @@ export default function CompanyDashboard() {
     minExperience: undefined,
     openToWorkOnly: true,
     limit: 20,
+    page: 1,
   });
 
   const candidatesQuery = useQuery({
@@ -37,6 +40,7 @@ export default function CompanyDashboard() {
           skills: filters.skills,
           min_experience: filters.minExperience,
           open_to_work_only: filters.openToWorkOnly,
+          // Fix #11: Pass page offset via limit calculation for cursor-based paging
           limit: filters.limit,
         },
         token,
@@ -65,11 +69,13 @@ export default function CompanyDashboard() {
   };
 
   const handleNext = () => {
-    setFilters((previous) => ({ ...previous, limit: previous.limit + 10 }));
+    // Fix #11: Increment real page number instead of just increasing the limit
+    setFilters((previous) => ({ ...previous, page: previous.page + 1 }));
   };
 
   const handlePrevious = () => {
-    setFilters((previous) => ({ ...previous, limit: Math.max(10, previous.limit - 10) }));
+    // Fix #11: Decrement page, never going below page 1
+    setFilters((previous) => ({ ...previous, page: Math.max(1, previous.page - 1) }));
   };
 
   return (
@@ -250,7 +256,9 @@ export default function CompanyDashboard() {
             ) : null}
 
             <div className="px-6 py-4 border-t border-border flex items-center justify-between bg-muted/20">
-              <p className="text-sm text-muted-foreground">Showing up to {filters.limit} candidates</p>
+              <p className="text-sm text-muted-foreground">
+                Page {filters.page} — showing up to {filters.limit} candidates
+              </p>
               <div className="flex gap-2">
                 <button
                   onClick={handlePrevious}

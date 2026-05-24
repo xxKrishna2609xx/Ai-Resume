@@ -126,8 +126,9 @@ export default function Jobs() {
                 onChange={(event) => setJobType(event.target.value)}
                 className="w-full px-4 py-2 rounded-lg border border-border bg-background"
               >
+                {/* Fix #19: Values match Adzuna API contract_type field values */}
                 <option value="">Any</option>
-                <option value="full_time">Full Time</option>
+                <option value="permanent">Full Time (Permanent)</option>
                 <option value="part_time">Part Time</option>
                 <option value="contract">Contract</option>
               </select>

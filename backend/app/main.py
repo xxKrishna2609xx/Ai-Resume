@@ -46,9 +46,16 @@ async def add_security_headers(request, call_next):
     return response
 
 # 3. ENABLE CORS
+# Fix #9: allow_origins=["*"] is incompatible with allow_credentials=True in browsers.
+# Use explicit origins instead.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=[
+        "http://localhost:5173",  # Vite dev server
+        "http://127.0.0.1:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -130,7 +137,7 @@ class UserProfile(BaseModel):
 class UpdateOpenToWorkRequest(BaseModel):
     """Model for updating open to work status"""
     openToWork: bool
-    page: int = 1
+    # Fix #8: Removed spurious 'page' field (was copy-pasted from JobFilterRequest)
 
 # --- ROUTES ---
 
@@ -334,13 +341,13 @@ async def upload_resume(
         update_time, doc_ref = db.collection("resumes").add(resume_data)
         print(f"✅ Saved Analysis to ID: {doc_ref.id}")
         
-        # Step F: Update user profile with resume ID
+        # Step G: Update user profile with resume ID
         db.collection("users").document(user.uid).update({
             'resumeId': doc_ref.id,
             'updatedAt': datetime.datetime.utcnow()
         })
 
-        # Step F: Return Response to Frontend
+        # Step H: Return Response to Frontend
         return {
             "id": doc_ref.id,
             "filename": file.filename,
@@ -353,17 +360,24 @@ async def upload_resume(
         print(f"❌ Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Fix #10: Added authentication so only authenticated users can fetch resumes
 @app.get("/get-resume/{resume_id}")
-def get_resume(resume_id: str):
+async def get_resume(resume_id: str, user: AuthUser = Depends(verify_firebase_token)):
     try:
         if db is None:
-             raise HTTPException(status_code=503, detail="Database error")
-             
+            raise HTTPException(status_code=503, detail="Database error")
+
         doc = db.collection("resumes").document(resume_id).get()
         if doc.exists:
-            return {"id": doc.id, **doc.to_dict()}
+            resume_data = doc.to_dict()
+            # Only allow user to access their own resume
+            if resume_data.get("user_id") != user.uid:
+                raise HTTPException(status_code=403, detail="Access denied")
+            return {"id": doc.id, **resume_data}
         else:
             raise HTTPException(status_code=404, detail="Resume not found")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

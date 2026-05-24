@@ -1,6 +1,5 @@
 import { Sparkles, BarChart3, Zap } from "lucide-react";
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { getHomeRouteByRole } from "@/lib/routes";

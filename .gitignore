@@ -1,3 +1,7 @@
+# ============================================================
+# AI Resume Project — .gitignore
+# ============================================================
+
 # --- Python Virtual Environment ---
 venv/
 .venv/
@@ -7,43 +11,82 @@ env/
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
+.Python
 
-# --- Node.js & NPM ---
+# --- Python Distribution / Packaging ---
+build/
+develop-eggs/
+eggs/
+.eggs/
+*.egg-info/
+*.egg
+
+# --- Node.js & Package Managers ---
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+.pnpm-store/
 
 # --- Build Outputs ---
 dist/
 dist-ssr/
-frontend/dist/
-backend/dist/
-New Frontend/dist/
+Frontend/dist/
+Backend/dist/
+*.local
 
-# --- Secrets & Environment Variables (CRITICAL) ---
+# ============================================================
+# SECRETS & ENVIRONMENT VARIABLES — NEVER COMMIT THESE
+# ============================================================
+
+# All .env files are ignored by default ...
 .env
 .env.*
+
+# ... EXCEPT .env.example files (safe templates with no real secrets)
 !.env.example
-frontend/.env
-backend/.env
+!**/.env.example
+
+# Explicit per-folder coverage (belt-and-suspenders)
+Frontend/.env
+Frontend/.env.local
+Frontend/.env.development
+Frontend/.env.production
 Backend/.env
-New Frontend/.env
+Backend/.env.local
+
+# Firebase service account key (contains private key — extremely sensitive)
 **/serviceAccountKey.json
 firebase-adminsdk-*.json
 
-# --- Large Binaries ---
-backend/poppler/
+# ============================================================
+# LARGE BINARIES & TOOLS
+# ============================================================
+Backend/poppler/
 *.zip
 *.exe
+*.dll
+*.so
 
-# --- OS Junk Files ---
+# ============================================================
+# OS JUNK FILES
+# ============================================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# --- IDE Settings ---
+# ============================================================
+# IDE & EDITOR SETTINGS
+# ============================================================
 .vscode/
 .idea/
 *.suo
@@ -51,12 +94,11 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+*.swp
 
-# --- Editor Cache ---
-*.local
-.config/
-
-# --- Documentation Files (Optional - generated during setup) ---
+# ============================================================
+# MISC / AUTO-GENERATED DOCS
+# ============================================================
 FRONTEND_UPDATE_SUMMARY.md
 MODULE_4_JOB_AGGREGATION.md
 AUTHENTICATION_SETUP.md

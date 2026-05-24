@@ -30,6 +30,8 @@ export default function Dashboard() {
         results_per_page: 20,
         page: 1,
       }),
+    // Fix #13: Only run after profile has loaded so currentTitle is available
+    enabled: Boolean(profile),
   });
 
   const openToWorkMutation = useMutation({
@@ -196,21 +198,23 @@ export default function Dashboard() {
             </Link>
 
             {/* View profile card */}
-            <div
+            {/* Edit profile card - Fix #20: was a dead div with no navigation */}
+            <Link
+              to="/profile-setup"
               className="slide-up group bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/20 rounded-2xl p-8 hover:shadow-lg hover:border-accent/40 transition-all cursor-pointer"
               style={{ animationDelay: "0.4s" }}
             >
               <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <Star className="w-6 h-6 text-accent" />
               </div>
-              <h3 className="font-semibold text-foreground mb-2">Viewed Profile</h3>
+              <h3 className="font-semibold text-foreground mb-2">Edit Profile</h3>
               <p className="text-sm text-muted-foreground">
-                Profile insights are available in your account metadata
+                Update your skills, title, and availability status
               </p>
-              <div className="mt-6 text-sm font-semibold text-accent">
-                Live profile connected
+              <div className="mt-6 text-sm font-semibold text-accent group-hover:gap-2 flex items-center gap-1 transition-all">
+                Go to profile <span>→</span>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
       </div>
