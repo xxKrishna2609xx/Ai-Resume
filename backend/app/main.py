@@ -261,9 +261,8 @@ async def search_candidates(
         if open_to_work_only:
             query = query.where('openToWork', '==', True)
         
-        candidates = []
-        # Apply pagination offset — Firestore requires ordering for .offset()
-        for doc in query.order_by('updatedAt', direction=firestore.Query.DESCENDING).offset(offset).limit(limit).stream():
+        all_candidates = []
+        for doc in query.stream():
             candidate_data = doc.to_dict()
             
             # Filter by skills if specified (post-query, Firestore array-contains supports only 1 value)
@@ -280,16 +279,31 @@ async def search_candidates(
             
             # Remove sensitive data
             candidate_data.pop('email', None)
-            candidates.append({
+            all_candidates.append({
                 'uid': doc.id,
                 **candidate_data
             })
         
+        # Sort all filtered candidates in memory by updatedAt descending
+        def get_updated_at(c):
+            val = c.get('updatedAt')
+            if val is not None:
+                if hasattr(val, 'tzinfo') and val.tzinfo is not None:
+                    return val
+                return val.replace(tzinfo=datetime.timezone.utc)
+            return datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+            
+        all_candidates.sort(key=get_updated_at, reverse=True)
+        
+        # Apply pagination slicing in memory
+        total_matched = len(all_candidates)
+        paginated_candidates = all_candidates[offset : offset + limit]
+        
         return {
-            "candidates": candidates,
-            "total": len(candidates),
+            "candidates": paginated_candidates,
+            "total": total_matched,
             "page": safe_page,
-            "message": f"Found {len(candidates)} candidates (page {safe_page})"
+            "message": f"Found {total_matched} candidates (showing page {safe_page})"
         }
         
     except HTTPException:

@@ -1,9 +1,97 @@
-import { Sparkles, BarChart3, Zap } from "lucide-react";
+import { Zap, Search, Shield, Upload } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { getHomeRouteByRole } from "@/lib/routes";
+import { motion } from "framer-motion";
 
+// ─── Animation Variants ──────────────────────────────────────────────────────
+const leftVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.1 } },
+};
+const leftItem = {
+  hidden: { opacity: 0, x: -24 },
+  show: { opacity: 1, x: 0, transition: { duration: 0.5, ease: "easeOut" as const } },
+};
+const cardVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.13, delayChildren: 0.2 } },
+};
+const cardItem = {
+  hidden: { opacity: 0, y: 32, scale: 0.96 },
+  show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.55, ease: "easeOut" as const } },
+};
+
+// ─── Feature bullets data ─────────────────────────────────────────────────────
+const features = [
+  {
+    icon: Zap,
+    color: "text-primary",
+    bg: "bg-primary/10",
+    border: "border-primary/20",
+    title: "AI-Powered Analysis",
+    desc: "Resume scored and analyzed in seconds",
+  },
+  {
+    icon: Search,
+    color: "text-secondary",
+    bg: "bg-secondary/10",
+    border: "border-secondary/20",
+    title: "Smart Job Matching",
+    desc: "Jobs ranked by your skills and experience",
+  },
+  {
+    icon: Shield,
+    color: "text-accent",
+    bg: "bg-accent/10",
+    border: "border-accent/20",
+    title: "Secure & Private",
+    desc: "Your data stays yours",
+  },
+];
+
+// ─── Preview cards data ────────────────────────────────────────────────────────
+const previewCards = [
+  {
+    icon: Upload,
+    iconColor: "text-primary",
+    iconBg: "bg-primary/10",
+    glowBorder: "glow-border-purple",
+    title: "Smart Resume Analysis",
+    stat: "8.4",
+    statLabel: "/ 10",
+    statColor: "text-primary",
+    extra: null,
+    delay: "0s",
+  },
+  {
+    icon: Search,
+    iconColor: "text-secondary",
+    iconBg: "bg-secondary/10",
+    glowBorder: "glow-border-cyan",
+    title: "87% Match Found",
+    stat: null,
+    statLabel: null,
+    statColor: "text-secondary",
+    badges: ["React", "TypeScript", "Node.js"],
+    delay: "0.8s",
+  },
+  {
+    icon: Zap,
+    iconColor: "text-accent",
+    iconBg: "bg-accent/10",
+    glowBorder: "",
+    title: "247 New Jobs",
+    stat: "247",
+    statLabel: null,
+    statColor: "text-accent",
+    sub: "This week",
+    delay: "1.6s",
+  },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function Index() {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, profile, signInWithGoogle, refreshProfile } = useAuth();
@@ -38,72 +126,157 @@ export default function Index() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-background via-primary/5 to-secondary/10 flex flex-col overflow-hidden">
-      {/* Decorative background shapes */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
-      <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-accent/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+    <div className="relative min-h-screen w-full bg-background overflow-hidden flex flex-col">
+      {/* ── Background pattern ── */}
+      <div
+        className="bg-grid absolute inset-0 opacity-[0.03] pointer-events-none"
+        aria-hidden="true"
+      />
 
-      {/* Content */}
+      {/* ── Atmospheric glow orbs ── */}
+      <div
+        className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle, hsl(var(--primary) / 0.18) 0%, transparent 70%)",
+          filter: "blur(60px)",
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="absolute -top-32 -right-32 w-[420px] h-[420px] rounded-full pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle, hsl(var(--secondary) / 0.14) 0%, transparent 70%)",
+          filter: "blur(60px)",
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[400px] h-[300px] rounded-full pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle, hsl(var(--accent) / 0.10) 0%, transparent 70%)",
+          filter: "blur(80px)",
+        }}
+        aria-hidden="true"
+      />
+
+      {/* ── Main layout ── */}
       <div className="relative z-10 flex flex-col lg:flex-row min-h-screen">
-        {/* Left side - Hero text */}
-        <div className="flex-1 flex flex-col justify-center items-center lg:items-start p-6 sm:p-8 md:p-12 text-center lg:text-left">
-          <div className="max-w-xl space-y-8 fade-in">
-            {/* Brand/Logo area */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 w-fit mx-auto lg:mx-0">
-              <Sparkles className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium text-primary">AI-Powered Talent Platform</span>
-            </div>
+        {/* ════════════════ LEFT SIDE ════════════════ */}
+        <motion.div
+          className="flex-1 flex flex-col justify-center items-center lg:items-start px-6 py-12 sm:px-10 md:px-16 lg:py-0"
+          variants={leftVariants}
+          initial="hidden"
+          animate="show"
+        >
+          <div className="max-w-xl w-full space-y-8">
+            {/* Brand */}
+            <motion.div variants={leftItem} className="flex items-center gap-3">
+              <div className="relative flex items-center justify-center w-11 h-11 rounded-full bg-primary/10 border border-primary/30">
+                <Zap className="w-5 h-5 text-primary" />
+                <span
+                  className="absolute inset-0 rounded-full"
+                  style={{
+                    boxShadow: "0 0 16px hsl(var(--primary) / 0.5)",
+                  }}
+                />
+              </div>
+              <span
+                className="font-mono text-base font-bold tracking-[0.2em] text-foreground"
+                style={{ fontFamily: "'JetBrains Mono', monospace" }}
+              >
+                RESUME<span className="text-primary"> AI</span>
+              </span>
+            </motion.div>
 
-            {/* Main heading */}
-            <div className="space-y-4">
-              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground">
-                Your <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Perfect Match</span> Awaits
+            {/* Headline */}
+            <motion.div variants={leftItem} className="space-y-4">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight text-foreground">
+                Your{" "}
+                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                  Perfect Match
+                </span>{" "}
+                Awaits
               </h1>
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-                Connect with opportunities tailored to your skills. For job seekers and companies alike, find your ideal match with AI-powered intelligence.
+                Connect with opportunities tailored to your skills. For job seekers and companies
+                alike — find your ideal match with AI-powered intelligence.
               </p>
-            </div>
+            </motion.div>
 
-            {/* Feature highlights */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
-              <div className="flex gap-3 items-start">
-                <div className="mt-1 p-2 rounded-lg bg-primary/10">
-                  <Zap className="w-5 h-5 text-primary" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-foreground text-sm">Smart Matching</h3>
-                  <p className="text-xs text-muted-foreground">AI analyzes resumes and requirements</p>
-                </div>
-              </div>
-              <div className="flex gap-3 items-start">
-                <div className="mt-1 p-2 rounded-lg bg-secondary/10">
-                  <BarChart3 className="w-5 h-5 text-secondary" />
-                </div>
-                <div className="text-left">
-                  <h3 className="font-semibold text-foreground text-sm">Instant Insights</h3>
-                  <p className="text-xs text-muted-foreground">Resume scores and match percentages</p>
-                </div>
-              </div>
-            </div>
+            {/* Feature bullets */}
+            <motion.div variants={leftItem} className="space-y-4 pt-2">
+              {features.map((f) => {
+                const Icon = f.icon;
+                return (
+                  <div key={f.title} className="flex items-start gap-4">
+                    <div
+                      className={`mt-0.5 flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg ${f.bg} border ${f.border}`}
+                    >
+                      <Icon className={`w-4 h-4 ${f.color}`} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{f.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{f.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </motion.div>
 
-            {/* Primary CTA */}
-            <div className="pt-6">
+            {/* CTA */}
+            <motion.div variants={leftItem} className="space-y-3 pt-2">
               <button
                 onClick={handleGoogleSignIn}
                 disabled={isSigningIn || isLoading}
-                className="w-full sm:w-fit px-8 py-4 rounded-xl font-semibold text-white bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/30 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 group"
+                className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-semibold text-white text-base transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background:
+                    "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.75) 100%)",
+                  boxShadow: isSigningIn || isLoading
+                    ? "none"
+                    : "0 0 28px hsl(var(--primary) / 0.4), 0 4px 20px hsl(var(--primary) / 0.25)",
+                }}
+                onMouseEnter={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    "0 0 40px hsl(var(--primary) / 0.65), 0 4px 28px hsl(var(--primary) / 0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow =
+                    "0 0 28px hsl(var(--primary) / 0.4), 0 4px 20px hsl(var(--primary) / 0.25)";
+                }}
               >
                 {isSigningIn || isLoading ? (
                   <>
-                    <div className="animate-spin">
-                      <Sparkles className="w-5 h-5" />
-                    </div>
-                    Connecting...
+                    {/* Spinner */}
+                    <svg
+                      className="w-5 h-5 animate-spin"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v8H4z"
+                      />
+                    </svg>
+                    Connecting…
                   </>
                 ) : (
                   <>
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    {/* Google Icon */}
+                    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
                       <path
                         fill="currentColor"
                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -125,64 +298,129 @@ export default function Index() {
                   </>
                 )}
               </button>
-              <p className="text-xs text-muted-foreground mt-4">
-                Choose your role after signing in — Job Seeker or Company
+              <p
+                className="text-xs text-muted-foreground"
+                style={{ fontFamily: "'JetBrains Mono', monospace" }}
+              >
+                Choose your role after sign in — Job Seeker or Company
               </p>
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Right side - Visual element */}
-        <div className="flex-1 hidden lg:flex items-center justify-center p-12">
-          <div className="relative w-full h-full max-w-md">
-            {/* Floating cards animation concept */}
-            <div className="space-y-6">
-              {/* Card 1 */}
-              <div className="slide-up" style={{ animationDelay: "0.1s" }}>
-                <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-shadow">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-lg bg-primary/10">
-                      <Sparkles className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">Smart Resume Analysis</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Upload and get instant insights</p>
-                    </div>
-                  </div>
+        {/* ════════════════ RIGHT SIDE ════════════════ */}
+        <div className="flex-1 hidden lg:flex items-center justify-center px-8 py-16">
+          <motion.div
+            className="relative w-full max-w-sm space-y-5"
+            variants={cardVariants}
+            initial="hidden"
+            animate="show"
+          >
+            {/* Card 1 — Purple: Smart Resume Analysis */}
+            <motion.div
+              variants={cardItem}
+              className="bento-tile glow-border-purple p-6"
+              style={{
+                animation: "float 5s ease-in-out infinite",
+                animationDelay: "0s",
+              }}
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-lg bg-primary/10 border border-primary/20">
+                  <Upload className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Smart Resume Analysis</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">AI-powered scoring</p>
                 </div>
               </div>
+              <div className="mt-4 flex items-baseline gap-1">
+                <span className="stat-number text-3xl text-primary glow-purple">8.4</span>
+                <span className="text-sm text-muted-foreground font-mono">/ 10</span>
+              </div>
+              <div className="mt-2 h-1.5 w-full rounded-full bg-primary/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{
+                    width: "84%",
+                    boxShadow: "0 0 8px hsl(var(--primary) / 0.7)",
+                  }}
+                />
+              </div>
+            </motion.div>
 
-              {/* Card 2 */}
-              <div className="slide-up" style={{ animationDelay: "0.2s" }}>
-                <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-shadow">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-lg bg-secondary/10">
-                      <BarChart3 className="w-6 h-6 text-secondary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">Find Perfect Matches</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Get jobs tailored to you</p>
-                    </div>
-                  </div>
+            {/* Card 2 — Cyan: 87% Match Found */}
+            <motion.div
+              variants={cardItem}
+              className="bento-tile glow-border-cyan p-6 ml-8"
+              style={{
+                animation: "float 5s ease-in-out infinite",
+                animationDelay: "0.8s",
+              }}
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-lg bg-secondary/10 border border-secondary/20">
+                  <Search className="w-5 h-5 text-secondary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">87% Match Found</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Best fit for your profile</p>
                 </div>
               </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {["React", "TypeScript", "Node.js"].map((skill) => (
+                  <span key={skill} className="cyber-badge">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </motion.div>
 
-              {/* Card 3 */}
-              <div className="slide-up" style={{ animationDelay: "0.3s" }}>
-                <div className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-shadow">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-lg bg-accent/10">
-                      <Zap className="w-6 h-6 text-accent" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground">One-Click Apply</h3>
-                      <p className="text-sm text-muted-foreground mt-1">Apply to positions instantly</p>
-                    </div>
-                  </div>
+            {/* Card 3 — Green: 247 New Jobs */}
+            <motion.div
+              variants={cardItem}
+              className="bento-tile p-6"
+              style={{
+                border: "1px solid hsl(var(--accent) / 0.3)",
+                animation: "float 5s ease-in-out infinite",
+                animationDelay: "1.6s",
+              }}
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 flex items-center justify-center w-11 h-11 rounded-lg bg-accent/10 border border-accent/20">
+                  <Zap className="w-5 h-5 text-accent" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">New Jobs</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">This week</p>
                 </div>
               </div>
-            </div>
-          </div>
+              <div className="mt-4 flex items-baseline gap-2">
+                <span
+                  className="stat-number text-4xl text-accent"
+                  style={{ filter: "drop-shadow(0 0 8px hsl(var(--accent) / 0.6))" }}
+                >
+                  247
+                </span>
+                <span
+                  className="text-xs font-mono text-accent/70"
+                  style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                >
+                  listings
+                </span>
+              </div>
+            </motion.div>
+
+            {/* Decorative: faint grid lines behind cards */}
+            <div
+              className="absolute inset-0 -z-10 rounded-3xl opacity-10"
+              style={{
+                backgroundImage:
+                  "repeating-linear-gradient(0deg, hsl(var(--border)) 0, hsl(var(--border)) 1px, transparent 1px, transparent 48px), repeating-linear-gradient(90deg, hsl(var(--border)) 0, hsl(var(--border)) 1px, transparent 1px, transparent 48px)",
+              }}
+              aria-hidden="true"
+            />
+          </motion.div>
         </div>
       </div>
     </div>

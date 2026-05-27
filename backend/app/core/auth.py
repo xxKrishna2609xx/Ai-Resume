@@ -36,8 +36,18 @@ async def verify_firebase_token(credentials: HTTPAuthorizationCredentials = Secu
     try:
         token = credentials.credentials
 
-        # Verify the token with Firebase Admin SDK
-        decoded_token = auth.verify_id_token(token)
+        try:
+            # Verify the token with Firebase Admin SDK
+            decoded_token = auth.verify_id_token(token)
+        except Exception as first_err:
+            # If it's a clock skew issue (token used too early), retry after a short delay
+            if "Token used too early" in str(first_err):
+                print(f"[Auth Warning] Clock skew detected ({first_err}). Retrying in 2 seconds...")
+                import time
+                time.sleep(2.0)
+                decoded_token = auth.verify_id_token(token)
+            else:
+                raise first_err
 
         return AuthUser(
             uid=decoded_token['uid'],
@@ -45,17 +55,22 @@ async def verify_firebase_token(credentials: HTTPAuthorizationCredentials = Secu
             token_data=decoded_token
         )
 
-    except auth.InvalidIdTokenError:
+    except auth.InvalidIdTokenError as e:
+        print(f"[Auth Error] Invalid ID Token: {e}")
         raise HTTPException(
             status_code=401,
             detail="Invalid authentication token"
         )
-    except auth.ExpiredIdTokenError:
+    except auth.ExpiredIdTokenError as e:
+        print(f"[Auth Error] Expired ID Token: {e}")
         raise HTTPException(
             status_code=401,
             detail="Authentication token has expired"
         )
     except Exception as e:
+        print(f"[Auth Error] Authentication failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=401,
             detail=f"Authentication failed: {str(e)}"

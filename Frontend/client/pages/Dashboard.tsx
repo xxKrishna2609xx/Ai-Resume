@@ -1,11 +1,62 @@
-import { TopNav } from "@/components/TopNav";
-import { MobileActionBar } from "@/components/MobileActionBar";
+import { AppShell } from "@/components/AppShell";
 import { Link } from "react-router-dom";
-import { Upload, Briefcase, Star, ToggleRight } from "lucide-react";
+import { Upload, Search, User, ArrowRight, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { getResumeById, searchJobs, updateOpenToWork } from "@/lib/api";
+import { motion } from "framer-motion";
+
+/* ─── Framer Motion Variants ─── */
+const containerVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+};
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" as const } },
+};
+
+/* ─── Circular Score Ring ─── */
+function ScoreRing({ score }: { score: number }) {
+  const r = 38;
+  const circ = 2 * Math.PI * r; // ≈ 238.76
+  const offset = circ * (1 - Math.min(10, Math.max(0, score)) / 10);
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 96, height: 96 }}>
+      <svg
+        width="96"
+        height="96"
+        className="rotate-[-90deg] absolute inset-0"
+      >
+        <circle
+          cx="48"
+          cy="48"
+          r={r}
+          fill="none"
+          stroke="hsl(var(--border))"
+          strokeWidth="6"
+        />
+        <circle
+          cx="48"
+          cy="48"
+          r={r}
+          fill="none"
+          stroke="hsl(var(--primary))"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          style={{
+            filter: "drop-shadow(0 0 8px hsl(var(--primary)))",
+            transition: "stroke-dashoffset 1.2s ease",
+          }}
+        />
+      </svg>
+      <span className="stat-number text-lg text-primary relative z-10">{score}</span>
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { profile, getIdToken, refreshProfile } = useAuth();
@@ -34,7 +85,7 @@ export default function Dashboard() {
         results_per_page: 20,
         page: 1,
       }),
-    // Fix #13: Only run after profile has loaded so currentTitle is available
+    // Only run after profile has loaded so currentTitle is available
     enabled: Boolean(profile),
   });
 
@@ -66,163 +117,199 @@ export default function Dashboard() {
     }
   };
 
+  /* ─── Derived role label ─── */
+  const roleLabel = profile?.currentTitle
+    ? profile.currentTitle.toUpperCase()
+    : "PROFESSIONAL";
+
   return (
-    <>
-      <TopNav />
-      <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-secondary/10 pb-20 md:pb-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-          {/* Welcome section */}
-          <div className="mb-12 fade-in">
-            <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-2">
-              Welcome back, {welcomeName}! 
-            </h1>
-            <p className="text-lg text-muted-foreground">
-              Your profile and job opportunities are synced live from your backend.
-            </p>
-          </div>
+    <AppShell>
+      <div className="p-6 lg:p-8 space-y-6 max-w-6xl">
 
-          {/* Status bar with Open to Work toggle */}
-          <div className="bg-card rounded-2xl border border-border p-6 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="font-semibold text-foreground mb-1">Profile Status</h2>
-              <p className="text-sm text-muted-foreground">
-                {openToWork
-                  ? "You are visible to employers"
-                  : "Your profile is hidden from employers"}
-              </p>
-            </div>
-            <button
-              onClick={handleToggleOpenToWork}
-              disabled={openToWorkMutation.isPending}
-              className={`flex items-center gap-3 px-6 py-3 rounded-xl font-semibold transition-all ${
-                openToWork
-                  ? "bg-primary text-white hover:shadow-lg hover:shadow-primary/30"
-                  : "bg-muted text-foreground hover:bg-muted/80"
-              }`}
-            >
-              <ToggleRight className="w-5 h-5" />
-              Open to Work
-            </button>
-          </div>
+        {/* ── Welcome Header ── */}
+        <motion.div
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <p className="section-label mb-2">DASHBOARD // {roleLabel}</p>
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight">
+            Welcome back,{" "}
+            <span className="text-primary" style={{ filter: "drop-shadow(0 0 12px hsl(var(--primary) / 0.6))" }}>
+              {welcomeName}
+            </span>
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm font-mono">
+            Your AI-powered career hub
+          </p>
+        </motion.div>
 
-          {/* Stats cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            {/* Resume stats */}
-            <div className="slide-up bg-card rounded-2xl border border-border p-8 hover:shadow-lg transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Upload className="w-6 h-6 text-primary" />
-                </div>
-                <span className="px-3 py-1 rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                  Latest
-                </span>
+        {/* ── Top Bento Row: 3 columns ── */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        >
+          {/* Tile 1 — Resume Score */}
+          <motion.div variants={itemVariants} className="bento-tile flex flex-col gap-4">
+            <p className="section-label">RESUME SCORE</p>
+            <div className="flex items-center gap-5 flex-1">
+              <ScoreRing score={resumeScore} />
+              <div>
+                <div className="stat-number text-3xl text-primary">{resumeScore}<span className="text-lg text-muted-foreground">/10</span></div>
+                <p className="text-xs text-muted-foreground mt-1 font-mono">
+                  {profile?.resumeId ? "Based on latest resume" : "Upload resume to score"}
+                </p>
               </div>
-              <h3 className="font-semibold text-foreground mb-1">Resume Score</h3>
-              <p className="text-muted-foreground text-sm mb-6">
-                {profile?.resumeId ? "Based on your latest uploaded resume" : "Upload a resume to see your score"}
-              </p>
-              <div className="text-4xl font-bold text-primary mb-2">{resumeScore}/10</div>
-              <div className="w-full bg-muted rounded-full h-2 mb-4">
-                <div
-                  className="bg-gradient-to-r from-primary to-primary/60 h-2 rounded-full"
-                  style={{ width: `${Math.min(100, Math.max(0, Number(resumeScore) * 10))}%` }}
-                />
-              </div>
-              <Link
-                to="/analyzer"
-                className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors"
-              >
-                View detailed analysis →
-              </Link>
             </div>
-
-            {/* Matches stats */}
-            <div className="slide-up bg-card rounded-2xl border border-border p-8 hover:shadow-lg transition-shadow" style={{ animationDelay: "0.1s" }}>
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center">
-                  <Briefcase className="w-6 h-6 text-secondary" />
-                </div>
-                <span className="px-3 py-1 rounded-full bg-secondary/10 text-xs font-semibold text-secondary">
-                  This week
-                </span>
-              </div>
-              <h3 className="font-semibold text-foreground mb-1">Job Matches</h3>
-              <p className="text-muted-foreground text-sm mb-6">
-                Live search with your current role and title
-              </p>
-              <div className="text-4xl font-bold text-secondary mb-2">{jobsTotal}</div>
-              <p className="text-xs text-muted-foreground mb-4">
-                {jobsQuery.isLoading ? "Loading opportunities..." : "Synced from the jobs API"}
-              </p>
-              <Link
-                to="/jobs"
-                className="text-sm font-semibold text-secondary hover:text-secondary/80 transition-colors"
-              >
-                Explore matches →
-              </Link>
-            </div>
-          </div>
-
-          {/* Action cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Upload resume card */}
             <Link
               to="/analyzer"
-              className="slide-up group bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-2xl p-8 hover:shadow-lg hover:border-primary/40 transition-all cursor-pointer"
-              style={{ animationDelay: "0.2s" }}
+              className="text-xs font-mono text-primary hover:text-primary/70 transition-colors flex items-center gap-1 mt-auto"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Upload className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">Upload Resume</h3>
-              <p className="text-sm text-muted-foreground">
-                Keep your resume fresh with the latest version
-              </p>
-              <div className="mt-6 text-sm font-semibold text-primary group-hover:gap-2 flex items-center gap-1 transition-all">
-                Get Started <span>→</span>
-              </div>
+              View detailed analysis <ArrowRight className="w-3 h-3" />
             </Link>
+          </motion.div>
 
-            {/* Find jobs card */}
+          {/* Tile 2 — Job Matches */}
+          <motion.div variants={itemVariants} className="bento-tile flex flex-col gap-4">
+            <p className="section-label">JOB MATCHES</p>
+            <div className="flex-1 flex flex-col justify-center">
+              <div className="stat-number text-5xl text-secondary" style={{ filter: "drop-shadow(0 0 10px hsl(var(--secondary) / 0.5))" }}>
+                {jobsQuery.isLoading ? (
+                  <Loader2 className="w-8 h-8 animate-spin text-secondary" />
+                ) : (
+                  jobsTotal
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground font-mono mt-2">
+                {jobsQuery.isLoading ? "Fetching live data..." : "Synced live"}
+              </p>
+            </div>
             <Link
               to="/jobs"
-              className="slide-up group bg-gradient-to-br from-secondary/10 to-secondary/5 border border-secondary/20 rounded-2xl p-8 hover:shadow-lg hover:border-secondary/40 transition-all cursor-pointer"
-              style={{ animationDelay: "0.3s" }}
+              className="text-xs font-mono text-secondary hover:text-secondary/70 transition-colors flex items-center gap-1 mt-auto"
             >
-              <div className="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Briefcase className="w-6 h-6 text-secondary" />
-              </div>
-              <h3 className="font-semibold text-foreground mb-2">Find Jobs</h3>
-              <p className="text-sm text-muted-foreground">
-                Browse and match with positions tailored for you
+              Explore matches <ArrowRight className="w-3 h-3" />
+            </Link>
+          </motion.div>
+
+          {/* Tile 3 — Availability / Open To Work */}
+          <motion.div variants={itemVariants} className="bento-tile flex flex-col gap-4">
+            <p className="section-label">AVAILABILITY</p>
+            <div className="flex-1 flex flex-col justify-center gap-3">
+              <p className="text-xs text-muted-foreground font-mono">
+                {openToWork
+                  ? "Profile visible to employers"
+                  : "Profile hidden from employers"}
               </p>
-              <div className="mt-6 text-sm font-semibold text-secondary group-hover:gap-2 flex items-center gap-1 transition-all">
-                Explore <span>→</span>
+              <button
+                onClick={handleToggleOpenToWork}
+                disabled={openToWorkMutation.isPending}
+                className={`relative flex items-center justify-center gap-2 w-full py-3 px-4 rounded-lg font-mono text-sm font-semibold transition-all duration-300 ${
+                  openToWork
+                    ? "bg-accent/10 border border-accent text-accent"
+                    : "bg-muted/30 border border-border text-muted-foreground"
+                }`}
+                style={
+                  openToWork
+                    ? { boxShadow: "0 0 16px hsl(var(--accent) / 0.35), inset 0 0 12px hsl(var(--accent) / 0.08)" }
+                    : {}
+                }
+              >
+                {openToWorkMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <span
+                      className={`w-2 h-2 rounded-full ${openToWork ? "bg-accent animate-pulse" : "bg-muted-foreground"}`}
+                    />
+                    {openToWork ? "OPEN TO WORK" : "NOT AVAILABLE"}
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        {/* ── Bottom Bento Row: Quick Actions ── */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        >
+          {/* Card 1 — Upload Resume → /analyzer */}
+          <motion.div variants={itemVariants}>
+            <Link
+              to="/analyzer"
+              className="bento-tile group flex flex-col gap-4 cursor-pointer hover:border-primary/50 transition-all duration-300 block"
+              style={{ display: "flex", flexDirection: "column" }}
+            >
+              <div
+                className="w-11 h-11 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
+                style={{ boxShadow: "0 0 0 0 hsl(var(--primary) / 0)" }}
+              >
+                <Upload className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-foreground text-base mb-1">Upload Resume</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Keep your resume fresh with the latest version and get AI-powered scoring.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-mono text-primary group-hover:gap-2 transition-all">
+                Get started <ArrowRight className="w-3 h-3" />
               </div>
             </Link>
+          </motion.div>
 
-            {/* View profile card */}
-            {/* Edit profile card - Fix #20: was a dead div with no navigation */}
+          {/* Card 2 — Find Jobs → /jobs */}
+          <motion.div variants={itemVariants}>
+            <Link
+              to="/jobs"
+              className="bento-tile group flex flex-col gap-4 cursor-pointer hover:border-secondary/50 transition-all duration-300 block"
+              style={{ display: "flex", flexDirection: "column" }}
+            >
+              <div className="w-11 h-11 rounded-lg bg-secondary/10 border border-secondary/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <Search className="w-5 h-5 text-secondary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-foreground text-base mb-1">Find Jobs</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Browse and match positions tailored for you using live search and resume ranking.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-mono text-secondary group-hover:gap-2 transition-all">
+                Explore <ArrowRight className="w-3 h-3" />
+              </div>
+            </Link>
+          </motion.div>
+
+          {/* Card 3 — Edit Profile → /profile-setup */}
+          <motion.div variants={itemVariants}>
             <Link
               to="/profile-setup"
-              className="slide-up group bg-gradient-to-br from-accent/10 to-accent/5 border border-accent/20 rounded-2xl p-8 hover:shadow-lg hover:border-accent/40 transition-all cursor-pointer"
-              style={{ animationDelay: "0.4s" }}
+              className="bento-tile group flex flex-col gap-4 cursor-pointer hover:border-accent/50 transition-all duration-300 block"
+              style={{ display: "flex", flexDirection: "column" }}
             >
-              <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Star className="w-6 h-6 text-accent" />
+              <div className="w-11 h-11 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <User className="w-5 h-5 text-accent" />
               </div>
-              <h3 className="font-semibold text-foreground mb-2">Edit Profile</h3>
-              <p className="text-sm text-muted-foreground">
-                Update your skills, title, and availability status
-              </p>
-              <div className="mt-6 text-sm font-semibold text-accent group-hover:gap-2 flex items-center gap-1 transition-all">
-                Go to profile <span>→</span>
+              <div className="flex-1">
+                <h3 className="font-bold text-foreground text-base mb-1">Edit Profile</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Update your skills, title, and availability status to attract the right opportunities.
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-xs font-mono text-accent group-hover:gap-2 transition-all">
+                Go to profile <ArrowRight className="w-3 h-3" />
               </div>
             </Link>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
+
       </div>
-      <MobileActionBar />
-    </>
+    </AppShell>
   );
 }
