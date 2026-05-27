@@ -234,11 +234,13 @@ async def search_candidates(
     min_experience: Optional[int] = None,
     open_to_work_only: bool = True,
     limit: int = 20,
+    page: int = 1,
     user: AuthUser = Depends(verify_firebase_token)
 ):
     """
     Search for job seekers (for companies)
-    Requires authentication and company role
+    Requires authentication and company role.
+    Supports page-based pagination via the `page` query parameter (1-indexed).
     """
     try:
         if db is None:
@@ -249,6 +251,10 @@ async def search_candidates(
         if not user_doc.exists or user_doc.to_dict().get('role') != 'company':
             raise HTTPException(status_code=403, detail="Only companies can search candidates")
         
+        # Clamp page to a minimum of 1
+        safe_page = max(1, page)
+        offset = (safe_page - 1) * limit
+
         # Build query
         query = db.collection("users").where('role', '==', 'job_seeker')
         
@@ -256,10 +262,11 @@ async def search_candidates(
             query = query.where('openToWork', '==', True)
         
         candidates = []
-        for doc in query.limit(limit).stream():
+        # Apply pagination offset — Firestore requires ordering for .offset()
+        for doc in query.order_by('updatedAt', direction=firestore.Query.DESCENDING).offset(offset).limit(limit).stream():
             candidate_data = doc.to_dict()
             
-            # Filter by skills if specified
+            # Filter by skills if specified (post-query, Firestore array-contains supports only 1 value)
             if skills:
                 skill_list = [s.strip().lower() for s in skills.split(',')]
                 candidate_skills = [s.lower() for s in candidate_data.get('skills', [])]
@@ -281,9 +288,12 @@ async def search_candidates(
         return {
             "candidates": candidates,
             "total": len(candidates),
-            "message": f"Found {len(candidates)} candidates"
+            "page": safe_page,
+            "message": f"Found {len(candidates)} candidates (page {safe_page})"
         }
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

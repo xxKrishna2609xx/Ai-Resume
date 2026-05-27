@@ -128,6 +128,7 @@ export async function searchCandidates(
     min_experience?: number;
     open_to_work_only?: boolean;
     limit?: number;
+    page?: number;
   },
   token: string,
 ): Promise<CandidateSearchResponse> {
@@ -137,6 +138,7 @@ export async function searchCandidates(
   if (typeof params.min_experience === "number") query.set("min_experience", String(params.min_experience));
   if (typeof params.open_to_work_only === "boolean") query.set("open_to_work_only", String(params.open_to_work_only));
   if (typeof params.limit === "number") query.set("limit", String(params.limit));
+  if (typeof params.page === "number") query.set("page", String(params.page));
 
   return requestJson<CandidateSearchResponse>(`/candidates/search?${query.toString()}`, {
     method: "GET",

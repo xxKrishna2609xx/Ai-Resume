@@ -1,8 +1,9 @@
 import os
+import re
+import json
+import traceback
 import google.generativeai as genai
 from typing import Dict, Any
-import json
-import re
 
 def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
     """
@@ -17,19 +18,21 @@ def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
         # Configure Gemini
         genai.configure(api_key=api_key)
 
-        # Fetch available models that support generateContent
+        # Fetch available models that support generateContent (best-effort)
         available_model_names = []
         try:
             available_models = list(genai.list_models())
-            available_model_names = [m.name for m in available_models if 'generateContent' in m.supported_generation_methods]
+            available_model_names = [
+                m.name for m in available_models
+                if 'generateContent' in m.supported_generation_methods
+            ]
             print(f"[AI] Available models from API: {available_model_names}")
         except Exception as e:
-            print(f"[Warning] Error listing models: {e}")
+            print(f"[Warning] Could not list models from API: {e}. Will try preferred models directly.")
 
         # List of preferred models in order of preference
+        # These are tried first against the listed models, then attempted directly as a hard fallback.
         preferred_models = [
-            'gemini-3.5-flash',
-            'gemini-3.1-flash-lite',
             'gemini-2.5-flash',
             'gemini-2.0-flash',
             'gemini-1.5-flash',
@@ -40,25 +43,47 @@ def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
         model = None
         model_name = None
 
-        print("[AI] Resolving Gemini model from available list...")
-        # Try to find a match from preferred models in the available models list
-        for name in preferred_models:
-            # Check both prefixed and unprefixed versions
-            normalized_name = name if name.startswith("models/") else f"models/{name}"
-            if normalized_name in available_model_names:
-                model_name = normalized_name
-                model = genai.GenerativeModel(model_name)
-                print(f"   [OK] Using preferred model: {model_name}")
-                break
+        print("[AI] Resolving Gemini model...")
 
-        # Fallback if no preferred model matched
-        if not model and available_model_names:
-            model_name = available_model_names[0]
-            model = genai.GenerativeModel(model_name)
-            print(f"   [OK] Using fallback model: {model_name}")
+        # Step 1: Try to find a preferred model in the listed available models
+        if available_model_names:
+            for name in preferred_models:
+                normalized_name = name if name.startswith("models/") else f"models/{name}"
+                if normalized_name in available_model_names:
+                    model_name = normalized_name
+                    model = genai.GenerativeModel(model_name)
+                    print(f"   [OK] Using preferred model (from list): {model_name}")
+                    break
+
+            # If no preferred model found, use the first available model
+            if not model:
+                model_name = available_model_names[0]
+                model = genai.GenerativeModel(model_name)
+                print(f"   [OK] Using first available model (from list): {model_name}")
+
+        # Step 2: Hard fallback — try each preferred model directly if list_models failed or
+        # returned no usable results. We attempt to instantiate and call the model; if it
+        # throws, we move on to the next one.
+        if not model:
+            print("[AI] Attempting hard fallback: probing preferred models directly...")
+            for name in preferred_models:
+                candidate_name = name if name.startswith("models/") else f"models/{name}"
+                try:
+                    probe = genai.GenerativeModel(candidate_name)
+                    # Send a minimal ping to verify the model is accessible
+                    probe.generate_content("ping")
+                    model = probe
+                    model_name = candidate_name
+                    print(f"   [OK] Hard fallback succeeded with model: {model_name}")
+                    break
+                except Exception as probe_err:
+                    print(f"   [Skip] Model {candidate_name} not accessible: {probe_err}")
 
         if not model:
-            return {"error": "Could not find a working Gemini model"}
+            return {"error": "Could not find a working Gemini model. Check your GEMINI_API_KEY and quota."}
+
+        # Ensure model_name is always a string from this point forward
+        model_name = model_name or "unknown"
 
 
         # Create the prompt for resume analysis
@@ -86,6 +111,9 @@ def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
         print(f"[AI] Got response: {result_text[:200]}...")
 
         # Try to parse JSON from response
+        # Initialize cleaned_text here so it is always bound, even if an early
+        # step inside the try block raises before it gets reassigned.
+        cleaned_text = result_text
         try:
             # Remove markdown code blocks if present
             cleaned_text = re.sub(r'```json\s*|\s*```', '', result_text)
@@ -147,7 +175,6 @@ def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
 
     except Exception as e:
         print(f"[Error] AI Analysis Error: {e}")
-        import traceback
         traceback.print_exc()
         return {"error": f"AI Analysis failed: {str(e)}"}
     

@@ -40,8 +40,8 @@ export default function CompanyDashboard() {
           skills: filters.skills,
           min_experience: filters.minExperience,
           open_to_work_only: filters.openToWorkOnly,
-          // Fix #11: Pass page offset via limit calculation for cursor-based paging
           limit: filters.limit,
+          page: filters.page,
         },
         token,
       );

@@ -1,5 +1,7 @@
 import io
+import os
 import re
+import traceback
 from pdfminer.high_level import extract_text
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
@@ -24,25 +26,37 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
         
     except Exception as e:
         print(f"[PDF Error] Error parsing PDF: {e}")
-        import traceback
         traceback.print_exc()
         return ""
 
 def extract_text_with_ocr(file_bytes: bytes) -> str:
     """
     Extract text from image-based PDFs using OCR (Optical Character Recognition).
+    Configure TESSERACT_CMD and POPPLER_PATH in your .env to override binary locations.
     """
     try:
+        # pdf2image and pytesseract are optional heavy deps — imported lazily so the
+        # app still starts even if they are not installed (OCR is only used as a fallback).
         from pdf2image import convert_from_bytes
         import pytesseract
-        import os
         
-        # Set Tesseract path for Windows
-        pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        # Read Tesseract path from env; fall back to the standard Windows install location
+        tesseract_cmd = os.getenv(
+            "TESSERACT_CMD",
+            r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        )
+        if tesseract_cmd:
+            pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
         
-        # Set Poppler path (bundled with project)
-        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        poppler_path = os.path.join(backend_dir, "poppler", "poppler-24.08.0", "Library", "bin")
+        # Read Poppler path from env.
+        # If blank/unset, fall back to the project-bundled poppler directory.
+        poppler_path_env = os.getenv("POPPLER_PATH", "")
+        if poppler_path_env:
+            poppler_path = poppler_path_env
+        else:
+            # Default: bundled poppler relative to the Backend folder
+            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            poppler_path = os.path.join(backend_dir, "poppler", "poppler-24.08.0", "Library", "bin")
         
         print("[PDF OCR] Converting PDF to images...")
         # Convert PDF to images
@@ -69,20 +83,26 @@ def extract_text_with_ocr(file_bytes: bytes) -> str:
         return "ERROR: OCR not available. Please install pytesseract and pdf2image."
     except Exception as e:
         print(f"[PDF OCR Error] OCR failed: {e}")
-        import traceback
         traceback.print_exc()
         return ""
 
 def clean_text_data(text: str) -> str:
     """
-    Removes clutter like extra whitespace, special characters, 
-    and weird PDF formatting artifacts.
+    Removes clutter like extra whitespace and PDF formatting artifacts,
+    while PRESERVING newlines so the document structure (sections, headers,
+    bullet points) remains readable for the AI and fallback parsers.
     """
-    # Replace multiple spaces/tabs with a single space
-    text = re.sub(r'\s+', ' ', text)
+    # Collapse multiple spaces/tabs on a single line into one space (do NOT touch newlines)
+    text = re.sub(r'[ \t]+', ' ', text)
     
-    # Remove non-printable characters (optional, but good for safety)
-    text = ''.join(char for char in text if char.isprintable())
+    # Collapse 3+ consecutive blank lines into a maximum of 2
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    
+    # Remove non-printable characters, but explicitly keep newlines and carriage returns
+    text = ''.join(
+        char for char in text
+        if char.isprintable() or char in ('\n', '\r')
+    )
     
     return text.strip()
 
