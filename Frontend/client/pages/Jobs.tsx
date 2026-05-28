@@ -1,9 +1,9 @@
 import { AppShell } from "@/components/AppShell";
-import { Search, Sparkles, Loader2, ExternalLink } from "lucide-react";
-import { useState } from "react";
+import { Search, Sparkles, Loader2, ExternalLink, FileText, Copy, Check, X } from "lucide-react";
+import { useState, useCallback } from "react";
 import { useMutation } from "@tanstack/react-query";
 import type { JobItem } from "@shared/api";
-import { matchJobsToResume, searchJobs } from "@/lib/api";
+import { generateCoverLetter, matchJobsToResume, searchJobs } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -16,6 +16,11 @@ const cardVariants = {
   hidden: { opacity: 0, y: 18 },
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" as const } },
 };
+const coverLetterVariants = {
+  hidden: { opacity: 0, height: 0, marginTop: 0 },
+  show: { opacity: 1, height: "auto", marginTop: 16, transition: { duration: 0.35, ease: "easeOut" as const } },
+  exit: { opacity: 0, height: 0, marginTop: 0, transition: { duration: 0.25, ease: "easeIn" as const } },
+};
 
 export default function Jobs() {
   const { profile, getIdToken } = useAuth();
@@ -26,6 +31,12 @@ export default function Jobs() {
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [statusLabel, setStatusLabel] = useState("Search jobs or match against your resume");
+
+  // Per-job cover letter state
+  const [coverLetterLoading, setCoverLetterLoading] = useState<Record<string, boolean>>({});
+  const [coverLetters, setCoverLetters] = useState<Record<string, string>>({});
+  const [coverLetterErrors, setCoverLetterErrors] = useState<Record<string, string>>({});
+  const [copiedJobId, setCopiedJobId] = useState<string | null>(null);
 
   const searchMutation = useMutation({
     mutationFn: () =>
@@ -39,6 +50,8 @@ export default function Jobs() {
       }),
     onSuccess: (response) => {
       setJobs(response.jobs);
+      setCoverLetters({});
+      setCoverLetterErrors({});
       setStatusLabel(`Found ${response.total} jobs from the search API`);
     },
   });
@@ -63,6 +76,8 @@ export default function Jobs() {
     },
     onSuccess: (response) => {
       setJobs(response.jobs);
+      setCoverLetters({});
+      setCoverLetterErrors({});
       setStatusLabel(`Found ${response.total} jobs ranked by resume match`);
     },
   });
@@ -86,6 +101,75 @@ export default function Jobs() {
       setError(err instanceof Error ? err.message : "Matching failed");
     }
   };
+
+  const handleGenerateCoverLetter = useCallback(
+    async (job: JobItem) => {
+      const resumeId = profile?.resumeId;
+      if (!resumeId) {
+        setCoverLetterErrors((prev) => ({
+          ...prev,
+          [job.id]: "Please upload your resume first from the Analyzer page.",
+        }));
+        return;
+      }
+
+      const token = await getIdToken();
+      if (!token) {
+        setCoverLetterErrors((prev) => ({
+          ...prev,
+          [job.id]: "Authentication token missing. Please sign in again.",
+        }));
+        return;
+      }
+
+      setCoverLetterLoading((prev) => ({ ...prev, [job.id]: true }));
+      setCoverLetterErrors((prev) => ({ ...prev, [job.id]: "" }));
+      // Clear existing letter so we show a fresh generation
+      setCoverLetters((prev) => ({ ...prev, [job.id]: "" }));
+
+      try {
+        const response = await generateCoverLetter(
+          {
+            resume_id: resumeId,
+            job_title: job.title,
+            company_name: job.company,
+            job_description: job.description ?? "",
+          },
+          token,
+        );
+        setCoverLetters((prev) => ({ ...prev, [job.id]: response.cover_letter }));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to generate cover letter";
+        setCoverLetterErrors((prev) => ({ ...prev, [job.id]: msg }));
+      } finally {
+        setCoverLetterLoading((prev) => ({ ...prev, [job.id]: false }));
+      }
+    },
+    [profile, getIdToken],
+  );
+
+  const handleCopy = useCallback(async (jobId: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedJobId(jobId);
+      setTimeout(() => setCopiedJobId(null), 2500);
+    } catch {
+      // Fallback for browsers that block clipboard access
+      const el = document.createElement("textarea");
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setCopiedJobId(jobId);
+      setTimeout(() => setCopiedJobId(null), 2500);
+    }
+  }, []);
+
+  const handleDismissCoverLetter = useCallback((jobId: string) => {
+    setCoverLetters((prev) => ({ ...prev, [jobId]: "" }));
+    setCoverLetterErrors((prev) => ({ ...prev, [jobId]: "" }));
+  }, []);
 
   const formatSalary = (job: JobItem) => {
     if (job.salary_min && job.salary_max) {
@@ -240,80 +324,204 @@ export default function Jobs() {
               animate="show"
               className="space-y-3"
             >
-              {jobs.map((job) => (
-                <motion.div
-                  key={job.id}
-                  variants={cardVariants}
-                  className="bento-tile space-y-3"
-                >
-                  {/* Top row: title + match badge */}
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <h2 className="font-bold text-foreground text-lg leading-tight">
-                      {job.title}
-                    </h2>
-                    {typeof job.match_score === "number" && (
-                      <span className="cyber-badge-purple shrink-0">
-                        Match {Math.round(job.match_score)}%
-                      </span>
-                    )}
-                  </div>
+              {jobs.map((job) => {
+                const isGenerating = coverLetterLoading[job.id] ?? false;
+                const coverLetter = coverLetters[job.id] ?? "";
+                const clError = coverLetterErrors[job.id] ?? "";
+                const isCopied = copiedJobId === job.id;
 
-                  {/* Company · Location */}
-                  <p className="text-sm text-muted-foreground font-mono">
-                    {job.company}
-                    {job.location ? (
-                      <>
-                        <span className="mx-1.5 text-border">·</span>
-                        {job.location}
-                      </>
-                    ) : null}
-                  </p>
-
-                  {/* Salary + Type */}
-                  <p className="section-label text-[10px]">
-                    {formatSalary(job)}
-                    {job.job_type ? (
-                      <>
-                        <span className="mx-1.5">·</span>
-                        {job.job_type}
-                      </>
-                    ) : null}
-                  </p>
-
-                  {/* Requirements */}
-                  {job.requirements?.length ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {job.requirements.slice(0, 8).map((skill) => (
-                        <span key={skill} className="cyber-badge">
-                          {skill}
+                return (
+                  <motion.div
+                    key={job.id}
+                    variants={cardVariants}
+                    className="bento-tile space-y-3"
+                  >
+                    {/* Top row: title + match badge */}
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <h2 className="font-bold text-foreground text-lg leading-tight">
+                        {job.title}
+                      </h2>
+                      {typeof job.match_score === "number" && (
+                        <span className="cyber-badge-purple shrink-0">
+                          Match {Math.round(job.match_score)}%
                         </span>
-                      ))}
+                      )}
                     </div>
-                  ) : null}
 
-                  {/* Description */}
-                  {job.description && (
-                    <p
-                      className="text-xs text-muted-foreground leading-relaxed line-clamp-3"
-                      style={{ fontFamily: "'JetBrains Mono', monospace" }}
-                    >
-                      {job.description}
+                    {/* Company · Location */}
+                    <p className="text-sm text-muted-foreground font-mono">
+                      {job.company}
+                      {job.location ? (
+                        <>
+                          <span className="mx-1.5 text-border">·</span>
+                          {job.location}
+                        </>
+                      ) : null}
                     </p>
-                  )}
 
-                  {/* Open listing link */}
-                  {job.url && (
-                    <a
-                      href={job.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-xs font-mono text-secondary hover:text-secondary/70 transition-colors"
-                    >
-                      Open listing <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                </motion.div>
-              ))}
+                    {/* Salary + Type */}
+                    <p className="section-label text-[10px]">
+                      {formatSalary(job)}
+                      {job.job_type ? (
+                        <>
+                          <span className="mx-1.5">·</span>
+                          {job.job_type}
+                        </>
+                      ) : null}
+                    </p>
+
+                    {/* Requirements */}
+                    {job.requirements?.length ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {job.requirements.slice(0, 8).map((skill) => (
+                          <span key={skill} className="cyber-badge">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {/* Description */}
+                    {job.description && (
+                      <p
+                        className="text-xs text-muted-foreground leading-relaxed line-clamp-3"
+                        style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                      >
+                        {job.description}
+                      </p>
+                    )}
+
+                    {/* Action row: Open listing + Generate Cover Letter */}
+                    <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-border/40">
+                      {job.url && (
+                        <a
+                          href={job.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-xs font-mono text-secondary hover:text-secondary/70 transition-colors"
+                        >
+                          Open listing <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+
+                      {/* Generate Cover Letter button */}
+                      <button
+                        type="button"
+                        id={`cover-letter-btn-${job.id}`}
+                        onClick={() => handleGenerateCoverLetter(job)}
+                        disabled={isGenerating}
+                        className="inline-flex items-center gap-1.5 text-xs font-mono px-3 py-1.5 rounded-lg
+                                   bg-emerald-500/10 border border-emerald-500/30 text-emerald-400
+                                   hover:bg-emerald-500/20 hover:border-emerald-500/60
+                                   disabled:opacity-50 disabled:cursor-not-allowed
+                                   transition-all duration-200"
+                      >
+                        {isGenerating ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="w-3 h-3" />
+                            {coverLetter ? "Regenerate Cover Letter" : "Generate Cover Letter"}
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Cover Letter Error */}
+                    {clError && (
+                      <p className="text-xs text-red-400 font-mono">⚠ {clError}</p>
+                    )}
+
+                    {/* Cover Letter Output */}
+                    <AnimatePresence>
+                      {coverLetter && (
+                        <motion.div
+                          key={`cl-${job.id}`}
+                          variants={coverLetterVariants}
+                          initial="hidden"
+                          animate="show"
+                          exit="exit"
+                          style={{ overflow: "hidden" }}
+                        >
+                          <div
+                            className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 space-y-3"
+                            style={{
+                              boxShadow: "0 0 20px rgba(16,185,129,0.08)",
+                            }}
+                          >
+                            {/* Cover letter header */}
+                            <div className="flex items-center justify-between">
+                              <p className="section-label text-[10px] text-emerald-400">
+                                ✦ AI-GENERATED COVER LETTER
+                              </p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                  {coverLetter.length} chars
+                                </span>
+                                {/* Copy button */}
+                                <button
+                                  type="button"
+                                  id={`copy-cover-letter-${job.id}`}
+                                  onClick={() => handleCopy(job.id, coverLetter)}
+                                  className={`inline-flex items-center gap-1 text-[10px] font-mono px-2 py-1 rounded-md
+                                    border transition-all duration-200
+                                    ${isCopied
+                                      ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400"
+                                      : "bg-secondary/10 border-border text-muted-foreground hover:text-foreground hover:border-secondary/40"
+                                    }`}
+                                >
+                                  {isCopied ? (
+                                    <>
+                                      <Check className="w-3 h-3" />
+                                      Copied!
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3 h-3" />
+                                      Copy
+                                    </>
+                                  )}
+                                </button>
+                                {/* Dismiss button */}
+                                <button
+                                  type="button"
+                                  id={`dismiss-cover-letter-${job.id}`}
+                                  onClick={() => handleDismissCoverLetter(job.id)}
+                                  className="inline-flex items-center justify-center w-6 h-6 rounded-md
+                                    text-muted-foreground hover:text-foreground hover:bg-secondary/20
+                                    border border-transparent hover:border-border transition-all duration-200"
+                                  title="Dismiss"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Cover letter text area */}
+                            <textarea
+                              id={`cover-letter-text-${job.id}`}
+                              readOnly
+                              value={coverLetter}
+                              rows={12}
+                              className="w-full bg-transparent text-sm text-foreground/90 font-mono leading-relaxed
+                                         resize-y rounded-lg p-0 border-none outline-none
+                                         placeholder:text-muted-foreground"
+                              style={{
+                                fontFamily: "'JetBrains Mono', monospace",
+                                fontSize: "0.78rem",
+                                lineHeight: "1.65",
+                              }}
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                );
+              })}
             </motion.div>
           )}
         </AnimatePresence>

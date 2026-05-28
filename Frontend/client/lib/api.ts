@@ -1,6 +1,8 @@
 import type {
   AuthMeResponse,
   CandidateSearchResponse,
+  CoverLetterRequest,
+  CoverLetterResponse,
   CreateOrUpdateProfileRequest,
   JobMatchRequest,
   JobMatchResponse,
@@ -143,5 +145,16 @@ export async function searchCandidates(
   return requestJson<CandidateSearchResponse>(`/candidates/search?${query.toString()}`, {
     method: "GET",
     headers: createHeaders(token, false),
+  });
+}
+
+export async function generateCoverLetter(
+  payload: CoverLetterRequest,
+  token: string,
+): Promise<CoverLetterResponse> {
+  return requestJson<CoverLetterResponse>("/jobs/cover-letter", {
+    method: "POST",
+    headers: createHeaders(token),
+    body: JSON.stringify(payload),
   });
 }

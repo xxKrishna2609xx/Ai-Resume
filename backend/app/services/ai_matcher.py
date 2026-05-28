@@ -177,4 +177,101 @@ def analyze_resume_with_gemini(text: str) -> Dict[str, Any]:
         print(f"[Error] AI Analysis Error: {e}")
         traceback.print_exc()
         return {"error": f"AI Analysis failed: {str(e)}"}
-    
+
+
+def generate_cover_letter_with_gemini(
+    resume_text: str,
+    job_title: str,
+    company_name: str,
+    job_description: str,
+) -> str:
+    """
+    Generates a personalized cover letter using Gemini AI by combining the
+    candidate's parsed resume text with the specific job details.
+
+    Returns the cover letter as a plain string, or raises on failure.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY not found in environment variables")
+
+    genai.configure(api_key=api_key)
+
+    # --- Model resolution (same approach as analyze_resume_with_gemini) ---
+    preferred_models = [
+        'gemini-2.5-flash',
+        'gemini-2.0-flash',
+        'gemini-1.5-flash',
+        'gemini-1.5-pro',
+        'gemini-pro',
+    ]
+
+    model = None
+    model_name = None
+
+    try:
+        available_models = list(genai.list_models())
+        available_model_names = [
+            m.name for m in available_models
+            if 'generateContent' in m.supported_generation_methods
+        ]
+        for name in preferred_models:
+            normalized = name if name.startswith("models/") else f"models/{name}"
+            if normalized in available_model_names:
+                model_name = normalized
+                model = genai.GenerativeModel(model_name)
+                break
+        if not model and available_model_names:
+            model_name = available_model_names[0]
+            model = genai.GenerativeModel(model_name)
+    except Exception:
+        pass
+
+    if not model:
+        for name in preferred_models:
+            candidate_name = name if name.startswith("models/") else f"models/{name}"
+            try:
+                probe = genai.GenerativeModel(candidate_name)
+                probe.generate_content("ping")
+                model = probe
+                model_name = candidate_name
+                break
+            except Exception:
+                continue
+
+    if not model:
+        raise RuntimeError("Could not find a working Gemini model. Check GEMINI_API_KEY and quota.")
+
+    print(f"[CoverLetter] Using model: {model_name}")
+
+    prompt = f"""
+You are an expert career coach and professional writer. Your task is to write a compelling, 
+highly personalized cover letter for a job application.
+
+--- CANDIDATE'S RESUME ---
+{resume_text}
+
+--- JOB DETAILS ---
+Job Title: {job_title}
+Company: {company_name}
+Job Description:
+{job_description}
+
+--- INSTRUCTIONS ---
+Write a professional cover letter that:
+1. Opens with a strong, engaging hook that references the specific role and company.
+2. Highlights 2-3 specific achievements or experiences from the resume that directly match the job requirements.
+3. Demonstrates genuine knowledge/enthusiasm about the company and role.
+4. Uses confident, active language and avoids clichés like "I am writing to apply...".
+5. Closes with a clear call-to-action requesting an interview.
+6. Is no longer than 4 paragraphs.
+7. Has a professional opening (Dear Hiring Manager,) and closing (Sincerely, [Candidate Name]).
+
+Output ONLY the cover letter text — no explanations, headers, or markdown formatting.
+"""
+
+    print(f"[CoverLetter] Generating cover letter for '{job_title}' at '{company_name}'...")
+    response = model.generate_content(prompt)
+    cover_letter = response.text.strip()
+    print(f"[CoverLetter] Generated {len(cover_letter)} chars")
+    return cover_letter

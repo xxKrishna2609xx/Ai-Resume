@@ -16,14 +16,14 @@ load_dotenv()
 # We use try/except to handle running this script from different locations
 try:
     from app.services.pdf_parser import extract_text_from_pdf
-    from app.services.ai_matcher import analyze_resume_with_gemini
+    from app.services.ai_matcher import analyze_resume_with_gemini, generate_cover_letter_with_gemini
     from app.services.job_aggregator import job_aggregator
     from app.core.auth import verify_firebase_token, get_current_user_optional, AuthUser
 except ImportError:
     try:
         # Fallback for running as a module
         from services.pdf_parser import extract_text_from_pdf
-        from services.ai_matcher import analyze_resume_with_gemini
+        from services.ai_matcher import analyze_resume_with_gemini, generate_cover_letter_with_gemini
         from services.job_aggregator import job_aggregator
         from core.auth import verify_firebase_token, get_current_user_optional, AuthUser
     except ImportError:
@@ -115,6 +115,13 @@ class JobMatchRequest(BaseModel):
     location: str = "US"
     results_per_page: int = 10
     page: int = 1
+
+class CoverLetterRequest(BaseModel):
+    """Model for generating a cover letter"""
+    resume_id: str
+    job_title: str
+    company_name: str
+    job_description: str = ""
 
 class UserProfile(BaseModel):
     """Model for user profile data"""
@@ -513,6 +520,66 @@ async def match_jobs_to_resume(
     except Exception as e:
         print(f"[Match Error] Error matching jobs: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/jobs/cover-letter")
+async def generate_cover_letter(
+    request: CoverLetterRequest,
+    user: AuthUser = Depends(verify_firebase_token)
+):
+    """
+    Generate a personalized cover letter for a specific job using the user's resume.
+
+    Fetches the parsed resume text from Firestore, then sends it along with the
+    job details to Gemini AI to produce a tailored cover letter.
+    """
+    if db is None:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    try:
+        # Step A: Retrieve the resume from Firestore
+        doc = db.collection("resumes").document(request.resume_id).get()
+        if not doc.exists:
+            raise HTTPException(status_code=404, detail="Resume not found")
+
+        resume_data = doc.to_dict()
+
+        # Only the owner can generate a cover letter for their resume
+        if resume_data.get("user_id") != user.uid:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Use full parsed text if available; fall back to the AI summary
+        resume_text = resume_data.get("parsed_text") or ""
+        if not resume_text:
+            ai_summary = resume_data.get("full_ai_response", {}).get("summary", "")
+            resume_text = ai_summary
+
+        if not resume_text:
+            raise HTTPException(
+                status_code=422,
+                detail="No resume text found. Please re-upload your resume."
+            )
+
+        # Step B: Generate cover letter via Gemini
+        cover_letter = generate_cover_letter_with_gemini(
+            resume_text=resume_text,
+            job_title=request.job_title,
+            company_name=request.company_name,
+            job_description=request.job_description,
+        )
+
+        return {
+            "cover_letter": cover_letter,
+            "job_title": request.job_title,
+            "company_name": request.company_name,
+            "message": "Cover letter generated successfully!"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[CoverLetter Error] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/jobs/locations")
 async def get_supported_locations():

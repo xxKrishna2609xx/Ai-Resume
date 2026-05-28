@@ -139,6 +139,20 @@ export interface CandidateSearchResponse {
   message: string;
 }
 
+export interface CoverLetterRequest {
+  resume_id: string;
+  job_title: string;
+  company_name: string;
+  job_description: string;
+}
+
+export interface CoverLetterResponse {
+  cover_letter: string;
+  job_title: string;
+  company_name: string;
+  message: string;
+}
+
 export interface DemoResponse {
   message: string;
 }
