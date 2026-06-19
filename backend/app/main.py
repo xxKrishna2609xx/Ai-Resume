@@ -11,16 +11,26 @@ load_dotenv()
 app = FastAPI(title="AI Resume Analyzer")
 
 # 3. ENABLE CORS
+allowed_origins = [
+    "http://localhost:8080",  # Vite dev server on port 8080
+    "http://127.0.0.1:8080",
+    "http://localhost:5173",  # Vite default dev server
+    "http://127.0.0.1:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
+prod_frontend_url = os.getenv("FRONTEND_URL")
+if prod_frontend_url:
+    allowed_origins.append(prod_frontend_url)
+    if prod_frontend_url.endswith("/"):
+        allowed_origins.append(prod_frontend_url[:-1])
+    else:
+        allowed_origins.append(f"{prod_frontend_url}/")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8080",  # Vite dev server on port 8080
-        "http://127.0.0.1:8080",
-        "http://localhost:5173",  # Vite default dev server
-        "http://127.0.0.1:5173",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

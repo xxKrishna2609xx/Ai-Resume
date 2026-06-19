@@ -59,7 +59,7 @@ An ultra-premium, AI-powered intelligent talent acquisition and career optimizat
 │   ├── requirements.txt     # Python backend dependencies
 │   └── serviceAccountKey.json # Firebase Admin service account credential
 │
-├── New Frontend/            # React Client + Vite Dev Server
+├── Frontend/                # React Client + Vite Dev Server
 │   ├── client/              # React SPA source files
 │   │   ├── components/      # Reusable Radix UI & custom components
 │   │   ├── hooks/           # Custom React hooks (auth, query hooks)
@@ -70,7 +70,6 @@ An ultra-premium, AI-powered intelligent talent acquisition and career optimizat
 │   ├── package.json         # Frontend package script & dependency manifest
 │   └── vite.config.ts       # Vite config with custom Express plugin
 │
-├── start.py                 # Multi-server automatic orchestrator script
 └── .env                     # Global Environment configuration file
 ```
 
@@ -95,27 +94,9 @@ Before launching the servers, make sure you have the following installed:
 
 ## 🚀 Quick Start Guide
 
-You can launch the AI Resume Analyzer in two ways: using the **Unified Launcher Script** (automated) or running **Separate Dev Servers** (recommended for active development).
+For development capabilities, hot-reloading, and debug outputs, run the frontend and backend servers in separate terminals.
 
-### Option A: The Unified Launcher (Automated)
-
-The workspace features a Python script `start.py` in the root folder that will spin up the backend server, wait for it to stabilize, and open the static frontend page automatically.
-
-1.  Ensure you have configured the environment variables (see [Environment Setup](#-environment-setup)).
-2.  Open your terminal in the root directory and run:
-    ```bash
-    python start.py
-    ```
-3.  The launcher will start FastAPI at `http://localhost:8000` and launch the browser at the static front-end url: `http://localhost:8000/static/index.html`.
-4.  To exit both servers, press `Ctrl+C` in your terminal window.
-
----
-
-### Option B: Separate Servers (Recommended for Development)
-
-For full development capabilities, hot-reloading, and debug outputs, run the frontend and backend servers in separate terminals.
-
-#### Step 1: Spin up the FastAPI Backend
+### Step 1: Spin up the FastAPI Backend
 
 1.  Open a terminal and navigate to the `Backend` directory:
     ```bash
@@ -140,9 +121,9 @@ For full development capabilities, hot-reloading, and debug outputs, run the fro
 
 #### Step 2: Spin up the Vite + React Frontend
 
-1.  Open a second terminal and navigate to the `New Frontend` directory:
+1.  Open a second terminal and navigate to the `Frontend` directory:
     ```bash
-    cd "New Frontend"
+    cd Frontend
     ```
 2.  Install dependencies:
     ```bash
@@ -176,8 +157,8 @@ ADZUNA_APP_KEY=your_adzuna_app_key
 *   **Adzuna API Credentials**: Register for a developer account at [Adzuna Developer Portal](https://developer.adzuna.com/).
 *   **Firebase Credentials**: Place your Firebase service account config file saved as `serviceAccountKey.json` inside the `Backend/` folder. This is used by the admin SDK to securely manage Firestore profiles and authenticate users.
 
-### 2. Frontend Environment Setup (`New Frontend/.env`)
-Create a `.env` file in the `New Frontend` folder and configure:
+### 2. Frontend Environment Setup (`Frontend/.env`)
+Create a `.env` file in the `Frontend` folder and configure:
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:8000
 VITE_FIREBASE_API_KEY=your_firebase_client_api_key
@@ -212,6 +193,6 @@ Here are the key API endpoints exposed by the FastAPI server:
 
 ## 🤝 Troubleshooting
 
-*   **Firebase Authentication Fails**: Verify that you've imported the correct `serviceAccountKey.json` in the `Backend` directory and populated `.env` in the `New Frontend` folder with client-side details. Ensure Firebase Auth is enabled in the Firebase Console.
+*   **Firebase Authentication Fails**: Verify that you've imported the correct `serviceAccountKey.json` in the `Backend` directory and populated `.env` in the `Frontend` folder with client-side details. Ensure Firebase Auth is enabled in the Firebase Console.
 *   **PDF Upload Failing / Empty Text**: Ensure `Tesseract` and `Poppler` are correctly configured in your system environment PATH. Restart your terminals after adding them.
 *   **Gemini API returning errors**: Check that your `GEMINI_API_KEY` is active and has appropriate rate limits.
