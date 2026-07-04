@@ -43,20 +43,16 @@ def extract_text_with_ocr(file_bytes: bytes) -> str:
         # Read Tesseract path from env; fall back to the standard Windows install location
         tesseract_cmd = os.getenv(
             "TESSERACT_CMD",
-            r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+            "tesseract"  # Linux/Render: on PATH. Windows: override via TESSERACT_CMD env var.
         )
         if tesseract_cmd:
             pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
         
         # Read Poppler path from env.
-        # If blank/unset, fall back to the project-bundled poppler directory.
-        poppler_path_env = os.getenv("POPPLER_PATH", "")
-        if poppler_path_env:
-            poppler_path = poppler_path_env
-        else:
-            # Default: bundled poppler relative to the Backend folder
-            backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            poppler_path = os.path.join(backend_dir, "poppler", "poppler-24.08.0", "Library", "bin")
+        # If blank/unset on Linux/Render: pass None so pdf2image uses system PATH.
+        # On Windows: set POPPLER_PATH to your bundled poppler bin folder.
+        poppler_path_env = os.getenv("POPPLER_PATH", "").strip()
+        poppler_path = poppler_path_env if poppler_path_env else None
         
         print("[PDF OCR] Converting PDF to images...")
         # Convert PDF to images
