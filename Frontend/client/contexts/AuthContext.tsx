@@ -1,7 +1,8 @@
 import {
   User,
   onAuthStateChanged,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
 } from "firebase/auth";
 import {
@@ -99,6 +100,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Pick up the result from a signInWithRedirect() that completed
+    // after the Google OAuth redirect returned to this page.
+    getRedirectResult(firebaseAuth).catch(() => {
+      // Silently ignore — no redirect in progress is the normal case
+    });
+
     const unsub = onAuthStateChanged(firebaseAuth, async (user) => {
       setFirebaseUser(user);
 
@@ -116,11 +123,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshProfile]);
 
   const signInWithGoogle = useCallback(async () => {
-    setIsLoading(true);
-    await signInWithPopup(firebaseAuth, googleProvider);
-    await refreshProfile();
-    setIsLoading(false);
-  }, [refreshProfile]);
+    // signInWithRedirect navigates away to Google and returns here after auth.
+    // onAuthStateChanged will fire with the signed-in user automatically.
+    await signInWithRedirect(firebaseAuth, googleProvider);
+  }, []);
 
   const logout = useCallback(async () => {
     await signOut(firebaseAuth);

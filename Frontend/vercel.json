@@ -4,6 +4,17 @@
   "installCommand": "npm install",
   "framework": "vite",
   "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
