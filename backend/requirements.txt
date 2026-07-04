@@ -1,12 +1,23 @@
-firebase-admin
-fastapi
-pydantic
-python-dotenv
-uvicorn
-pdfminer.six
-google-generativeai
-pytesseract
-pdf2image
-pillow
-requests
-python-multipart
+# ─── Web Framework ─────────────────────────────────────────────────────────────
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+pydantic==2.10.3
+
+# ─── Environment ───────────────────────────────────────────────────────────────
+python-dotenv==1.0.1
+
+# ─── Firebase ──────────────────────────────────────────────────────────────────
+firebase-admin==6.6.0
+
+# ─── PDF Parsing ───────────────────────────────────────────────────────────────
+pdfminer.six==20231228
+pdf2image==1.17.0
+pytesseract==0.3.13
+pillow==11.1.0
+
+# ─── AI / Google ───────────────────────────────────────────────────────────────
+google-generativeai==0.8.3
+
+# ─── HTTP ──────────────────────────────────────────────────────────────────────
+requests==2.32.3
