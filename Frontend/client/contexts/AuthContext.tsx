@@ -1,7 +1,10 @@
 import {
   User,
   onAuthStateChanged,
+  signInWithPopup,
   signInWithRedirect,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   getRedirectResult,
   signOut,
 } from "firebase/auth";
@@ -24,6 +27,8 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   signInWithGoogle: () => Promise<void>;
+  signInWithEmail: (email: string, pass: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<AuthMeResponse | null>;
   getIdToken: (forceRefresh?: boolean) => Promise<string | null>;
@@ -101,9 +106,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Pick up the result from a signInWithRedirect() that completed
-    // after the Google OAuth redirect returned to this page.
     getRedirectResult(firebaseAuth).catch(() => {
-      // Silently ignore — no redirect in progress is the normal case
+      // Silently ignore — no redirect in progress is normal
     });
 
     const unsub = onAuthStateChanged(firebaseAuth, async (user) => {
@@ -123,9 +127,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshProfile]);
 
   const signInWithGoogle = useCallback(async () => {
-    // signInWithRedirect navigates away to Google and returns here after auth.
-    // onAuthStateChanged will fire with the signed-in user automatically.
-    await signInWithRedirect(firebaseAuth, googleProvider);
+    try {
+      // Try popup first (faster & stays on page)
+      await signInWithPopup(firebaseAuth, googleProvider);
+    } catch (popupError: any) {
+      console.warn("signInWithPopup failed/blocked, trying redirect fallback...", popupError);
+      if (
+        popupError?.code === "auth/popup-blocked" ||
+        popupError?.code === "auth/popup-closed-by-user"
+      ) {
+        throw popupError;
+      }
+      // Fallback to redirect if popup fails for domain reasons
+      await signInWithRedirect(firebaseAuth, googleProvider);
+    }
+  }, []);
+
+  const signInWithEmail = useCallback(async (email: string, pass: string) => {
+    await signInWithEmailAndPassword(firebaseAuth, email, pass);
+  }, []);
+
+  const signUpWithEmail = useCallback(async (email: string, pass: string) => {
+    await createUserWithEmailAndPassword(firebaseAuth, email, pass);
   }, []);
 
   const logout = useCallback(async () => {
@@ -141,11 +164,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       isAuthenticated: Boolean(firebaseUser),
       signInWithGoogle,
+      signInWithEmail,
+      signUpWithEmail,
       logout,
       refreshProfile,
       getIdToken,
     }),
-    [firebaseUser, profile, isLoading, signInWithGoogle, logout, refreshProfile, getIdToken],
+    [
+      firebaseUser,
+      profile,
+      isLoading,
+      signInWithGoogle,
+      signInWithEmail,
+      signUpWithEmail,
+      logout,
+      refreshProfile,
+      getIdToken,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -158,3 +193,4 @@ export function useAuth() {
   }
   return context;
 }
+
