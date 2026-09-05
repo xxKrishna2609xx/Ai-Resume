@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { getHomeRouteByRole } from "@/lib/routes";
 import { motion } from "framer-motion";
+import { BackendStatusBadge } from "@/components/BackendStatusBadge";
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
 const leftVariants = {
@@ -204,6 +205,7 @@ export default function Index() {
 
           {/* Auth Controls */}
           <div className="flex items-center gap-3">
+            <BackendStatusBadge />
             {isAuthenticated ? (
               <div className="flex items-center gap-3">
                 <div className="hidden sm:flex flex-col text-right">

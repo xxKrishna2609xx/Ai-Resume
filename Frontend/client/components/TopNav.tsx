@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getHomeRouteByRole, toNavUserRole } from "@/lib/routes";
 
+import { BackendStatusBadge } from "@/components/BackendStatusBadge";
+
 interface TopNavProps {
   isAuthenticated?: boolean;
   userName?: string;
@@ -79,7 +81,8 @@ export function TopNav({
           )}
 
           {/* User menu and auth */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <BackendStatusBadge />
             {resolvedIsAuthenticated ? (
               <>
                 {/* Role badge */}
